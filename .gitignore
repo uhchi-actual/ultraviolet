@@ -1,0 +1,12 @@
+# Build artifacts
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Rokit
+.rokit/
+
+# OS
+.DS_Store
+Thumbs.db
