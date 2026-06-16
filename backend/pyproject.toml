@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ultraviolet-backend"
+version = "0.1.0"
+description = "Ultraviolet — multi-agent music recommendation engine (backend)"
+readme = "../README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Reuben (uhchi)" }]
+
+# Core dependencies — enough to boot the API (health + chat via Ollama).
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "httpx>=0.27",
+    "python-multipart>=0.0.9",
+    "sqlmodel>=0.0.21",
+    "psycopg[binary]>=3.2",
+    "ollama>=0.3",
+]
+
+[project.optional-dependencies]
+# Multi-agent orchestration + vector store (Phase 3/4).
+agents = [
+    "langgraph>=0.2",
+    "chromadb>=0.5",
+]
+# Audio analysis pipeline (Phase 2). essentia ships Linux wheels; on the
+# backend container it installs cleanly. librosa/numpy are cross-platform.
+audio = [
+    "librosa>=0.10",
+    "numpy>=1.26",
+    "essentia",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

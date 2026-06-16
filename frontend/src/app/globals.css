@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────
+   Ultraviolet design tokens (PRD §7). Canonical hex values live here
+   under their PRD names; the @theme block below maps them to Tailwind
+   color/font utilities (e.g. `bg-uv-navy`, `text-uv-text-primary`).
+   ─────────────────────────────────────────────────────────────── */
+:root {
+  /* ── Ultraviolet core gradient (indigo → raspberry) ── */
+  --uv-navy: #16007a;
+  --uv-indigo-ink: #35007a;
+  --uv-indigo: #45007a;
+  --uv-indigo-mid: #52007a;
+  --uv-indigo-light: #5e007a;
+  --uv-purple: #68007a;
+  --uv-purple-bright: #7a007a;
+  --uv-purple-warm: #7a0066;
+  --uv-plum: #7a0058;
+  --uv-raspberry: #7a0045;
+
+  /* ── Functional surfaces ── */
+  --uv-bg-primary: #0a0015;
+  --uv-bg-surface: #120025;
+  --uv-bg-elevated: #1a0035;
+
+  /* ── Text ── */
+  --uv-text-primary: #e8e0f0;
+  --uv-text-secondary: #9b8aaf;
+  --uv-text-muted: #6b5a7f;
+
+  /* ── Effects ── */
+  --uv-glow: rgba(122, 0, 122, 0.25);
+  --uv-gradient: linear-gradient(135deg, #16007a, #7a007a, #7a0045);
+
+  /* ── Semantic ── */
+  --uv-success: #4ade80;
+  --uv-warning: #fbbf24;
+  --uv-error: #f87171;
+  --uv-info: #7a007a;
+
+  /* ── uhchi brand palette ── */
+  --uhchi-bg: #2d2d2d;
+  --uhchi-primary: #cc2936;
+  --uhchi-secondary: #2a9d8f;
+  --uhchi-red-dim: #991e28;
+  --uhchi-red-bright: #e63946;
+  --uhchi-teal-dim: #1e7a6e;
+  --uhchi-teal-bright: #3db8a9;
+}
+
+@theme inline {
+  /* ── Colors → Tailwind utilities ── */
+  --color-uv-navy: var(--uv-navy);
+  --color-uv-indigo-ink: var(--uv-indigo-ink);
+  --color-uv-indigo: var(--uv-indigo);
+  --color-uv-indigo-mid: var(--uv-indigo-mid);
+  --color-uv-indigo-light: var(--uv-indigo-light);
+  --color-uv-purple: var(--uv-purple);
+  --color-uv-purple-bright: var(--uv-purple-bright);
+  --color-uv-purple-warm: var(--uv-purple-warm);
+  --color-uv-plum: var(--uv-plum);
+  --color-uv-raspberry: var(--uv-raspberry);
+
+  --color-uv-bg-primary: var(--uv-bg-primary);
+  --color-uv-bg-surface: var(--uv-bg-surface);
+  --color-uv-bg-elevated: var(--uv-bg-elevated);
+
+  --color-uv-text-primary: var(--uv-text-primary);
+  --color-uv-text-secondary: var(--uv-text-secondary);
+  --color-uv-text-muted: var(--uv-text-muted);
+
+  --color-uv-success: var(--uv-success);
+  --color-uv-warning: var(--uv-warning);
+  --color-uv-error: var(--uv-error);
+  --color-uv-info: var(--uv-info);
+
+  --color-uhchi-bg: var(--uhchi-bg);
+  --color-uhchi-primary: var(--uhchi-primary);
+  --color-uhchi-secondary: var(--uhchi-secondary);
+  --color-uhchi-red-dim: var(--uhchi-red-dim);
+  --color-uhchi-red-bright: var(--uhchi-red-bright);
+  --color-uhchi-teal-dim: var(--uhchi-teal-dim);
+  --color-uhchi-teal-bright: var(--uhchi-teal-bright);
+
+  /* ── Fonts (CSS vars set by next/font in layout.tsx) ── */
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--uv-bg-primary);
+    color: var(--uv-text-primary);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Ambient violet glow anchored to the top of the page. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60rem 40rem at 50% -10rem, rgba(122, 0, 122, 0.22), transparent 70%),
+      radial-gradient(40rem 30rem at 90% 0, rgba(122, 0, 69, 0.12), transparent 70%);
+  }
+
+  ::selection {
+    background: var(--uv-purple-bright);
+    color: #fff;
+  }
+
+  /* Themed scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--uv-indigo-light) transparent;
+  }
+}
+
+@layer utilities {
+  .uv-gradient-text {
+    background: var(--uv-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .uv-gradient-bg {
+    background: var(--uv-gradient);
+  }
+}

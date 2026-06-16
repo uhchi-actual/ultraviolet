@@ -1,0 +1,42 @@
+"""Application configuration via environment variables (Pydantic Settings)."""
+
+from __future__ import annotations
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    # ── Database ──
+    database_url: str = "postgresql://ultraviolet:ultraviolet@localhost:5432/ultraviolet"
+
+    # ── ChromaDB ──
+    chromadb_host: str = "localhost"
+    chromadb_port: int = 8000
+
+    # ── Ollama ──
+    ollama_host: str = "http://localhost:11434"
+    ollama_model: str = "goekdenizguelmez/JOSIEFIED-Qwen3:8b"
+    embedding_model: str = "nomic-embed-text"
+
+    # ── CORS ──
+    cors_origins: list[str] = ["http://localhost:3000"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @property
+    def sqlalchemy_url(self) -> str:
+        """Normalize the DB URL to use the psycopg (v3) driver for SQLAlchemy."""
+        if self.database_url.startswith("postgresql://"):
+            return self.database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return self.database_url
+
+
+settings = Settings()

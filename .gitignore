@@ -1,12 +1,47 @@
-# Build artifacts
-*.rbxl
-*.rbxlx
-*.rbxm
-*.rbxmx
+# ─── Node / Next.js ───
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+.vercel
 
-# Rokit
-.rokit/
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# OS
+# ─── Environment ───
+.env
+.env.local
+.env.*.local
+
+# ─── Data (keep structure, ignore contents) ───
+data/audio/*
+data/exports/*
+data/models/*
+!data/**/.gitkeep
+
+# ─── OS / Editor ───
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# ─── Logs ───
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
