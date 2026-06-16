@@ -34,7 +34,7 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 h-14 border-b border-uv-indigo-mid bg-uv-navy/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 h-14 border-b border-uv-indigo-mid bg-uv-navy">
       <nav className="mx-auto flex h-full max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
           <WaveIcon />

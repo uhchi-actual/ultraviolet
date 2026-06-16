@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -22,7 +24,9 @@ class Settings(BaseSettings):
     embedding_model: str = "nomic-embed-text"
 
     # ── CORS ──
-    cors_origins: list[str] = ["http://localhost:3000"]
+    # NoDecode: stop pydantic-settings from JSON-parsing the env var so the
+    # validator below can accept a plain comma-separated string.
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
 
     @field_validator("cors_origins", mode="before")
     @classmethod

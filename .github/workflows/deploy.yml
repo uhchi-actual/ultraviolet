@@ -1,0 +1,16 @@
+name: Deploy
+
+# Deployment pipeline is fleshed out in Phase 5 (build + push images, deploy
+# the stack). For now it is a manually-triggered placeholder so the workflow
+# exists alongside ci.yml per the repository structure.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy (placeholder)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder
+        run: echo "Ultraviolet deployment pipeline lands in Phase 5."

@@ -6,7 +6,6 @@ build-backend = "hatchling.build"
 name = "ultraviolet-backend"
 version = "0.1.0"
 description = "Ultraviolet — multi-agent music recommendation engine (backend)"
-readme = "../README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Reuben (uhchi)" }]
