@@ -2,12 +2,15 @@
 @config "../../tailwind.config.ts";
 
 /* ───────────────────────────────────────────────────────────────
-   Ultraviolet design tokens (PRD §7). Canonical hex values live here
-   under their PRD names; the @theme block below maps them to Tailwind
-   color/font utilities (e.g. `bg-uv-navy`, `text-uv-text-primary`).
+   Ultraviolet design tokens.
+
+   Base / surfaces are a neutral charcoal scale extracted from the
+   uhchi background (#2d2d2d). The Ultraviolet indigo→raspberry
+   gradient is reserved as the single ACCENT (logo, buttons, active
+   states, highlights, glows). uhchi brand colors remain available.
    ─────────────────────────────────────────────────────────────── */
 :root {
-  /* ── Ultraviolet core gradient (indigo → raspberry) ── */
+  /* ── Ultraviolet accent gradient stops (indigo → raspberry) ── */
   --uv-navy: #16007a;
   --uv-indigo-ink: #35007a;
   --uv-indigo: #45007a;
@@ -19,18 +22,20 @@
   --uv-plum: #7a0058;
   --uv-raspberry: #7a0045;
 
-  /* ── Functional surfaces ── */
-  --uv-bg-primary: #0a0015;
-  --uv-bg-surface: #120025;
-  --uv-bg-elevated: #1a0035;
+  /* ── Functional surfaces — extracted from uhchi charcoal (#2d2d2d) ── */
+  --uv-bg-primary: #232323; /* app canvas */
+  --uv-bg-surface: #2c2c2c; /* cards / panels (≈ uhchi-bg) */
+  --uv-bg-elevated: #363636; /* elevated / hover */
+  --uv-border: #3d3d3d; /* subtle dividers */
+  --uv-border-strong: #4a4a4a; /* stronger outlines */
 
-  /* ── Text ── */
-  --uv-text-primary: #e8e0f0;
-  --uv-text-secondary: #9b8aaf;
-  --uv-text-muted: #6b5a7f;
+  /* ── Text — neutral greys from the charcoal base ── */
+  --uv-text-primary: #ededed;
+  --uv-text-secondary: #a8a8a8;
+  --uv-text-muted: #6f6f6f;
 
   /* ── Effects ── */
-  --uv-glow: rgba(122, 0, 122, 0.25);
+  --uv-glow: rgba(122, 0, 122, 0.35);
   --uv-gradient: linear-gradient(135deg, #16007a, #7a007a, #7a0045);
 
   /* ── Semantic ── */
@@ -39,7 +44,7 @@
   --uv-error: #f87171;
   --uv-info: #7a007a;
 
-  /* ── uhchi brand palette ── */
+  /* ── uhchi brand palette (canonical) ── */
   --uhchi-bg: #2d2d2d;
   --uhchi-primary: #cc2936;
   --uhchi-secondary: #2a9d8f;
@@ -80,6 +85,8 @@
   --color-uv-bg-primary: var(--uv-bg-primary);
   --color-uv-bg-surface: var(--uv-bg-surface);
   --color-uv-bg-elevated: var(--uv-bg-elevated);
+  --color-uv-border: var(--uv-border);
+  --color-uv-border-strong: var(--uv-border-strong);
 
   --color-uv-text-primary: var(--uv-text-primary);
   --color-uv-text-secondary: var(--uv-text-secondary);
@@ -118,7 +125,7 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Ambient violet glow anchored to the top of the page. */
+  /* Subtle ambient violet accent glow anchored to the top of the page. */
   body::before {
     content: "";
     position: fixed;
@@ -126,8 +133,8 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(60rem 40rem at 50% -10rem, rgba(122, 0, 122, 0.22), transparent 70%),
-      radial-gradient(40rem 30rem at 90% 0, rgba(122, 0, 69, 0.12), transparent 70%);
+      radial-gradient(55rem 36rem at 50% -12rem, rgba(122, 0, 122, 0.16), transparent 70%),
+      radial-gradient(38rem 28rem at 88% -4rem, rgba(122, 0, 69, 0.1), transparent 70%);
   }
 
   ::selection {
@@ -138,11 +145,12 @@
   /* Themed scrollbar */
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--uv-indigo-light) transparent;
+    scrollbar-color: var(--uv-border-strong) transparent;
   }
 }
 
 @layer utilities {
+  /* Accent gradient as text fill (logo, headings, eyebrows, highlights). */
   .uv-gradient-text {
     background: var(--uv-gradient);
     -webkit-background-clip: text;
@@ -150,7 +158,16 @@
     color: transparent;
   }
 
+  /* Accent gradient as a solid fill (buttons, underlines, dots, bars). */
   .uv-gradient-bg {
     background: var(--uv-gradient);
+  }
+
+  /* 1px accent gradient border via background-clip trick. */
+  .uv-gradient-border {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--uv-bg-surface), var(--uv-bg-surface)) padding-box,
+      var(--uv-gradient) border-box;
   }
 }

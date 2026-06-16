@@ -11,12 +11,12 @@ export function PhaseBadge({ phase, label = "Coming in", className }: PhaseBadge
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-uv-indigo-mid bg-uv-bg-elevated px-3 py-1",
+        "inline-flex items-center gap-1.5 rounded-full border border-uv-border bg-uv-bg-elevated px-3 py-1",
         "font-mono text-xs text-uv-text-secondary",
         className,
       )}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-uhchi-secondary" />
+      <span className="uv-gradient-bg h-1.5 w-1.5 rounded-full" />
       {label} Phase {phase}
     </span>
   );

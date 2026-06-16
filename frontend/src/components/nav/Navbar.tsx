@@ -21,8 +21,9 @@ function WaveIcon() {
     >
       <defs>
         <linearGradient id="uv-wave" x1="0" y1="0" x2="24" y2="0">
-          <stop offset="0%" stopColor="var(--uv-purple-bright)" />
-          <stop offset="100%" stopColor="var(--uhchi-secondary)" />
+          <stop offset="0%" stopColor="var(--uv-navy)" />
+          <stop offset="55%" stopColor="var(--uv-purple-bright)" />
+          <stop offset="100%" stopColor="var(--uv-raspberry)" />
         </linearGradient>
       </defs>
       <path d="M2 12c2 0 2-7 4-7s2 14 4 14 2-14 4-14 2 7 4 7 2-3.5 2-3.5" />
@@ -34,11 +35,11 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 h-14 border-b border-uv-indigo-mid bg-uv-navy">
+    <header className="sticky top-0 z-50 h-14 bg-uv-bg-primary/95 backdrop-blur-sm">
       <nav className="mx-auto flex h-full max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
           <WaveIcon />
-          <span className="font-display text-lg font-semibold tracking-tight text-uv-text-primary">
+          <span className="uv-gradient-text font-display text-lg font-semibold tracking-tight">
             Ultraviolet
           </span>
         </Link>
@@ -51,19 +52,25 @@ export function Navbar() {
                 <Link
                   href={link.href}
                   className={cn(
-                    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    "relative rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                     active
-                      ? "text-uhchi-primary"
-                      : "text-uv-text-muted hover:text-uv-text-secondary",
+                      ? "text-uv-text-primary"
+                      : "text-uv-text-muted hover:text-uv-text-primary",
                   )}
                 >
                   {link.label}
+                  {active ? (
+                    <span className="uv-gradient-bg absolute inset-x-3 -bottom-px h-0.5 rounded-full" />
+                  ) : null}
                 </Link>
               </li>
             );
           })}
         </ul>
       </nav>
+
+      {/* Accent gradient underline for the header (replaces the bright violet bar). */}
+      <span className="uv-gradient-bg pointer-events-none absolute inset-x-0 bottom-0 h-px opacity-70" />
     </header>
   );
 }

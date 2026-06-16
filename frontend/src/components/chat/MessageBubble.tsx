@@ -17,8 +17,8 @@ export function MessageBubble({ role, content }: ChatTurn) {
         className={cn(
           "max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm",
           isUser
-            ? "bg-uhchi-primary text-white"
-            : "border border-uv-indigo-mid bg-uv-bg-elevated text-uv-text-primary",
+            ? "uv-gradient-bg text-white"
+            : "border border-uv-border bg-uv-bg-elevated text-uv-text-primary",
         )}
       >
         {content}

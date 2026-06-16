@@ -12,7 +12,7 @@ export function GlowCard({ children, className }: GlowCardProps) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-uv-indigo-mid bg-uv-bg-surface/70 p-6 backdrop-blur-sm",
+        "rounded-xl border border-uv-border bg-uv-bg-surface/70 p-6 backdrop-blur-sm",
         "transition-all duration-300 hover:border-uv-purple-bright",
         "hover:shadow-[0_0_2rem_var(--uv-glow)]",
         className,

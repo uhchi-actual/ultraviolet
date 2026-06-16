@@ -7,19 +7,18 @@ interface IdentifierBadgeProps {
   className?: string;
 }
 
-/** Styled badge for an identifier name, color-coded by category (PRD §8.2). */
+/** Styled badge for an identifier name; custom-niche identifiers get the UV accent. */
 export function IdentifierBadge({ name, category, className }: IdentifierBadgeProps) {
+  const niche = category === "Custom Niche";
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md px-2 py-0.5 font-mono text-xs",
-        category === "Custom Niche"
-          ? "border border-uhchi-teal-dim bg-uv-bg-surface text-uhchi-teal-bright"
-          : "border border-uv-indigo-light bg-uv-bg-elevated text-uv-text-secondary",
+        "inline-flex items-center rounded-md border bg-uv-bg-elevated px-2 py-0.5 font-mono text-xs",
+        niche ? "border-uv-border-strong" : "border-uv-border",
         className,
       )}
     >
-      {name}
+      <span className={niche ? "uv-gradient-text" : "text-uv-text-secondary"}>{name}</span>
     </span>
   );
 }

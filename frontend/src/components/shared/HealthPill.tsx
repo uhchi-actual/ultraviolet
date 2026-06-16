@@ -29,7 +29,7 @@ export function HealthPill() {
       : "Checking API…";
 
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-uv-indigo-mid bg-uv-bg-elevated px-3 py-1 font-mono text-xs text-uv-text-secondary">
+    <span className="inline-flex items-center gap-2 rounded-full border border-uv-border bg-uv-bg-elevated px-3 py-1 font-mono text-xs text-uv-text-secondary">
       <span className={cn("h-2 w-2 rounded-full", dot)} />
       {label}
     </span>

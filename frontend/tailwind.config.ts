@@ -27,10 +27,12 @@ const config: Config = {
           "purple-warm": "var(--uv-purple-warm)",
           plum: "var(--uv-plum)",
           raspberry: "var(--uv-raspberry)",
-          // functional surfaces
+          // functional surfaces (charcoal scale, extracted from uhchi #2d2d2d)
           "bg-primary": "var(--uv-bg-primary)",
           "bg-surface": "var(--uv-bg-surface)",
           "bg-elevated": "var(--uv-bg-elevated)",
+          border: "var(--uv-border)",
+          "border-strong": "var(--uv-border-strong)",
           // text
           "text-primary": "var(--uv-text-primary)",
           "text-secondary": "var(--uv-text-secondary)",

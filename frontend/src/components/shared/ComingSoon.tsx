@@ -16,7 +16,7 @@ export function ComingSoon({ phase, points }: ComingSoonProps) {
       <ul className="mt-3 space-y-2">
         {points.map((point) => (
           <li key={point} className="flex gap-2.5 text-sm text-uv-text-secondary">
-            <span className="mt-[0.45rem] h-1 w-1 shrink-0 rounded-full bg-uhchi-secondary" />
+            <span className="uv-gradient-bg mt-[0.45rem] h-1 w-1 shrink-0 rounded-full" />
             {point}
           </li>
         ))}

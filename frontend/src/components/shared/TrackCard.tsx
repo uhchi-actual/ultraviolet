@@ -12,7 +12,7 @@ export function TrackCard({ title, artist, confidence, className }: TrackCardPro
   return (
     <div
       className={cn(
-        "flex items-center justify-between rounded-lg border border-uv-indigo-mid bg-uv-bg-surface p-4",
+        "flex items-center justify-between rounded-lg border border-uv-border bg-uv-bg-surface p-4",
         className,
       )}
     >
@@ -21,7 +21,7 @@ export function TrackCard({ title, artist, confidence, className }: TrackCardPro
         <p className="text-sm text-uv-text-secondary">{artist}</p>
       </div>
       {typeof confidence === "number" ? (
-        <span className="font-mono text-sm text-uhchi-primary">
+        <span className="uv-gradient-text font-mono text-sm">
           {Math.round(confidence * 100)}%
         </span>
       ) : null}
