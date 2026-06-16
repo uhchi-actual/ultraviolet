@@ -13,9 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml ./
 COPY src ./src
 
-# Phase 1 installs the core API. Add ".[agents,audio]" as those phases land.
+# Core API + Phase 2 audio analysis stack (librosa/numpy/scipy/soundfile).
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir .
+    && pip install --no-cache-dir ".[audio]"
 
 EXPOSE 8000
 

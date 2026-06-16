@@ -37,3 +37,39 @@ export const IDENTIFIERS: IdentifierMeta[] = [
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+/** Pitch-class names indexed 0-11 (Identifier 6, key). */
+export const KEY_NAMES = [
+  "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+] as const;
+
+/** Scalar identifiers (0-1) plotted on the radar. */
+export const RADAR_AXES: { key: string; label: string }[] = [
+  { key: "valence", label: "Valence" },
+  { key: "energy", label: "Energy" },
+  { key: "danceability", label: "Dance" },
+  { key: "acousticness", label: "Acoustic" },
+  { key: "instrumentalness", label: "Instrum." },
+  { key: "texture_density", label: "Texture" },
+  { key: "rhythmic_complexity", label: "Rhythm" },
+  { key: "production_aesthetic", label: "Prod." },
+  { key: "harmonic_darkness", label: "Darkness" },
+];
+
+/** Human labels for the 12 instrumentation-profile categories (Identifier 15). */
+export const INSTRUMENT_LABELS: Record<string, string> = {
+  synth: "Synth",
+  electric_guitar: "Electric guitar",
+  acoustic_guitar: "Acoustic guitar",
+  drums_electronic: "Drums (electronic)",
+  drums_acoustic: "Drums (acoustic)",
+  bass_synth: "Bass (synth)",
+  bass_electric: "Bass (electric)",
+  piano_keys: "Piano / keys",
+  strings_orchestral: "Strings",
+  brass_winds: "Brass / winds",
+  vocals: "Vocals",
+  noise_texture: "Noise / texture",
+};
+
+export const UV_GRADIENT_STOPS = ["#16007a", "#7a007a", "#7a0045"] as const;

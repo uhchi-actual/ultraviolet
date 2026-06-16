@@ -37,6 +37,14 @@ export interface IdentifierVector {
   instrumentation_profile: InstrumentationProfile;
 }
 
+export interface AnalyzeResponse {
+  track_id: string;
+  title: string;
+  artist: string | null;
+  identifiers: IdentifierVector;
+  waveform_data: number[];
+}
+
 export interface ChatTurn {
   role: "user" | "assistant";
   content: string;

@@ -1,10 +1,13 @@
 """Master analysis pipeline: run all 15 identifier extractors for a track.
 
-Implemented in Phase 2. ``librosa``/``essentia``/``numpy`` are imported lazily
-inside the individual extractors so importing this module is always safe.
+``analyze_waveform`` is the synchronous core; ``analyze_track`` loads a file and
+runs it off the event loop. Heavy audio deps are imported lazily here so the app
+can be imported without the audio stack installed.
 """
 
 from __future__ import annotations
+
+import asyncio
 
 from src.models.identifiers import IdentifierVector
 
@@ -27,6 +30,58 @@ IDENTIFIER_NAMES: list[str] = [
 ]
 
 
+def analyze_waveform(y, sr: int) -> IdentifierVector:
+    """Compute the full 15-identifier fingerprint from a loaded waveform."""
+    from src.analysis.audio_features import (
+        extract_acousticness,
+        extract_danceability,
+        extract_energy,
+        extract_harmonic_darkness,
+        extract_instrumentalness,
+        extract_key_mode,
+        extract_loudness_profile,
+        extract_production_aesthetic,
+        extract_rhythmic_complexity,
+        extract_tempo,
+        extract_texture_density,
+        extract_valence,
+    )
+    from src.analysis.emotional_arc import extract_emotional_arc
+    from src.analysis.instruments import extract_instrumentation_profile
+    from src.analysis.vocal_analysis import extract_vocal_character
+
+    key, mode = extract_key_mode(y, sr)
+    instrumentalness = extract_instrumentalness(y, sr)
+
+    instrumentation = extract_instrumentation_profile(y, sr)
+    instrumentation.vocals = round(float(min(max(1.0 - instrumentalness, 0.0), 1.0)), 3)
+
+    return IdentifierVector(
+        valence=extract_valence(y, sr),
+        energy=extract_energy(y, sr),
+        danceability=extract_danceability(y, sr),
+        acousticness=extract_acousticness(y, sr),
+        tempo=extract_tempo(y, sr),
+        key=key,
+        mode=mode,
+        instrumentalness=instrumentalness,
+        loudness_profile=extract_loudness_profile(y, sr),
+        texture_density=extract_texture_density(y, sr),
+        emotional_arc=extract_emotional_arc(y, sr),
+        vocal_character=extract_vocal_character(y, sr, instrumentalness),
+        rhythmic_complexity=extract_rhythmic_complexity(y, sr),
+        production_aesthetic=extract_production_aesthetic(y, sr),
+        harmonic_darkness=extract_harmonic_darkness(y, sr),
+        instrumentation_profile=instrumentation,
+    )
+
+
 async def analyze_track(file_path: str) -> IdentifierVector:
-    """Load a track and compute its full 15-identifier fingerprint (Phase 2)."""
-    raise NotImplementedError("The DJ analysis pipeline is implemented in Phase 2.")
+    """Load a track and compute its full 15-identifier fingerprint off-thread."""
+    from src.utils.audio_io import load_audio
+
+    def _run() -> IdentifierVector:
+        y, sr = load_audio(file_path)
+        return analyze_waveform(y, sr)
+
+    return await asyncio.to_thread(_run)

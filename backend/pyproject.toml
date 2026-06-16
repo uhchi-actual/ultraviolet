@@ -29,13 +29,17 @@ agents = [
     "langgraph>=0.2",
     "chromadb>=0.5",
 ]
-# Audio analysis pipeline (Phase 2). essentia ships Linux wheels; on the
-# backend container it installs cleanly. librosa/numpy are cross-platform.
+# Audio analysis pipeline (Phase 2). librosa/numpy/scipy/soundfile are
+# cross-platform and install cleanly on both Windows and the Linux container.
 audio = [
     "librosa>=0.10",
     "numpy>=1.26",
-    "essentia",
+    "scipy>=1.11",
+    "soundfile>=0.12",
 ]
+# Optional essentia-based instrument models (Linux wheels only). Not required:
+# the Phase 2 instrumentation profile uses librosa spectral heuristics.
+essentia = ["essentia"]
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
