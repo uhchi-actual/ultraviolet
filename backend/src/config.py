@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     ollama_model: str = "goekdenizguelmez/JOSIEFIED-Qwen3:8b"
     embedding_model: str = "nomic-embed-text"
 
+    # ── Demucs (DJ stem separation) ──
+    stem_cache_dir: str = "data/stems"
+    demucs_device: str = "cuda"  # falls back to cpu when CUDA unavailable
+
     # ── CORS ──
     # NoDecode: stop pydantic-settings from JSON-parsing the env var so the
     # validator below can accept a plain comma-separated string.

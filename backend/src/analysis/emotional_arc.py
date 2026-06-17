@@ -1,8 +1,7 @@
-"""Identifier 10 — Emotional Arc (PRD §4).
+"""Emotional arc — quarter-by-quarter intensity on the full mix.
 
-Divides the track into 4 equal segments and computes an absolute intensity per
-segment (RMS energy + spectral brightness) so the shape captures the emotional
-trajectory: flat ≈ [0.5, 0.5, 0.5, 0.5], slow build ≈ [0.2, 0.4, 0.7, 0.9].
+Only surfaced when variation exceeds 15% (max − min > 0.15); otherwise labeled
+"Consistent throughout" with no chart data.
 """
 
 from __future__ import annotations
@@ -10,7 +9,10 @@ from __future__ import annotations
 import librosa
 import numpy as np
 
+from src.models.identifiers import EmotionalArc
+
 _EPS = 1e-9
+_VARIATION_THRESHOLD = 0.15
 
 
 def _norm(value: float, lo: float, hi: float) -> float:
@@ -19,9 +21,9 @@ def _norm(value: float, lo: float, hi: float) -> float:
     return float(np.clip((value - lo) / (hi - lo), 0.0, 1.0))
 
 
-def extract_emotional_arc(y: np.ndarray, sr: int) -> list[float]:
+def extract_emotional_arc(y: np.ndarray, sr: int) -> EmotionalArc:
     if len(y) == 0:
-        return [0.0, 0.0, 0.0, 0.0]
+        return EmotionalArc()
 
     segments = np.array_split(y, 4)
     scores: list[float] = []
@@ -33,4 +35,8 @@ def extract_emotional_arc(y: np.ndarray, sr: int) -> list[float]:
         centroid = float(np.mean(librosa.feature.spectral_centroid(y=seg, sr=sr)))
         intensity = 0.6 * _norm(rms, 0.0, 0.2) + 0.4 * _norm(centroid, 500.0, 4000.0)
         scores.append(round(intensity, 3))
-    return scores
+
+    if max(scores) - min(scores) <= _VARIATION_THRESHOLD:
+        return EmotionalArc(values=[], label="Consistent throughout")
+
+    return EmotionalArc(values=scores, label="")

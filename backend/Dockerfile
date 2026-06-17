@@ -2,8 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System libraries needed by the audio stack (librosa/soundfile/ffmpeg).
-# Kept here so Phase 2 (`.[audio]`) builds without changes.
+# System libraries for audio (librosa/soundfile) and Demucs.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libsndfile1 \
@@ -13,9 +12,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml ./
 COPY src ./src
 
-# Core API + Phase 2 audio stack + Phase 3 vector-store client.
+# PyTorch CUDA wheel for Demucs GPU separation, then the app stack.
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir ".[audio,vectorstore]"
+    && pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu124 \
+    && pip install --no-cache-dir ".[audio,vectorstore,demucs]"
 
 EXPOSE 8000
 

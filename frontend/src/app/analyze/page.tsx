@@ -7,7 +7,7 @@ export default function AnalyzePage() {
       <PageHeader
         eyebrow="DJ agent"
         title="Analyze"
-        description="Upload a track and the DJ agent fingerprints it locally with librosa — a 15-identifier breakdown across rhythm, harmony, texture, and instrumentation. No streams, no metadata, just the signal."
+        description="Upload a track and the DJ agent separates it with Demucs (drums, bass, vocals, other, guitar, piano), then measures only identifiers we can back with real stem data. No guesses, no metadata."
       />
       <AnalyzePanel />
     </div>

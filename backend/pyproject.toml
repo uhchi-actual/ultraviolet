@@ -41,9 +41,11 @@ audio = [
     "scipy>=1.11",
     "soundfile>=0.12",
 ]
-# Optional essentia-based instrument models (Linux wheels only). Not required:
-# the Phase 2 instrumentation profile uses librosa spectral heuristics.
-essentia = ["essentia"]
+# Demucs stem separation (DJ rebuild). torch/torchaudio installed in Dockerfile
+# with the CUDA wheel when building the GPU image.
+demucs = [
+    "demucs>=4.0",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",

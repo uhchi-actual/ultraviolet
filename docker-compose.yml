@@ -26,12 +26,21 @@ services:
       - OLLAMA_MODEL=goekdenizguelmez/JOSIEFIED-Qwen3:8b
       - EMBEDDING_MODEL=nomic-embed-text
       - CORS_ORIGINS=http://localhost:3000
+      - DEMUCS_DEVICE=cuda
+      - STEM_CACHE_DIR=/app/data/stems
     depends_on:
       - postgres
       - chromadb
       - ollama
     volumes:
       - ./data:/app/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   postgres:
     image: postgres:16

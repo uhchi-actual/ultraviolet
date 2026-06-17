@@ -1,4 +1,4 @@
-"""POST /api/analyze — upload an audio file and get its 15-identifier breakdown."""
+"""POST /api/analyze — upload an audio file and get its Demucs-backed fingerprint."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ async def analyze(
     title: Annotated[str | None, Form()] = None,
     artist: Annotated[str | None, Form()] = None,
 ) -> dict:
-    from src.analysis.identifiers import analyze_waveform
+    from src.analysis.identifiers import analyze_track
     from src.utils.audio_io import downsample_waveform, is_supported_format, load_audio
 
     filename = file.filename or "upload"
@@ -47,8 +47,8 @@ async def analyze(
             tmp.write(data)
             tmp_path = tmp.name
 
-        y, sr = await asyncio.to_thread(load_audio, tmp_path)
-        vector = await asyncio.to_thread(analyze_waveform, y, sr)
+        vector = await analyze_track(tmp_path)
+        y, _ = await asyncio.to_thread(load_audio, tmp_path)
         waveform = downsample_waveform(y)
     except HTTPException:
         raise

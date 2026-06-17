@@ -35,7 +35,7 @@ export function AnalyzePanel() {
       {loading ? (
         <div className="flex items-center gap-3 rounded-xl border border-uv-border bg-uv-bg-surface/70 p-5 text-sm text-uv-text-secondary">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-uv-border-strong border-t-uv-purple-bright" />
-          Fingerprinting <span className="text-uv-text-primary">{fileName}</span> — extracting 15 identifiers with librosa…
+          Separating stems with Demucs and measuring <span className="text-uv-text-primary">{fileName}</span>… this can take a minute on GPU.
         </div>
       ) : null}
 

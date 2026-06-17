@@ -1,3 +1,5 @@
+import type { IdentifierVector, StemProfile } from "./types";
+
 export const NAV_LINKS = [
   { href: "/radio", label: "Radio" },
   { href: "/tree", label: "Tree" },
@@ -38,7 +40,27 @@ export const IDENTIFIERS: IdentifierMeta[] = [
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-/** Pitch-class names indexed 0-11 (Identifier 6, key). */
+/** Demucs stem labels (presence 0–100). */
+export const STEM_LABELS: Record<keyof StemProfile, string> = {
+  drums_presence: "Drums",
+  bass_presence: "Bass",
+  vocals_presence: "Vocals",
+  other_presence: "Other",
+  guitar_presence: "Guitar",
+  piano_presence: "Piano",
+};
+
+/** Scalar identifiers shown on the Analyze page (all Demucs-backed or reliable DSP). */
+export const ANALYZE_METRICS: { key: keyof IdentifierVector; label: string; format: "pct" | "bpm" | "key" }[] = [
+  { key: "energy", label: "Energy", format: "pct" },
+  { key: "danceability", label: "Groove", format: "pct" },
+  { key: "instrumentalness", label: "Instrumental", format: "pct" },
+  { key: "texture_density", label: "Density", format: "pct" },
+  { key: "rhythmic_complexity", label: "Rhythm complexity", format: "pct" },
+  { key: "harmonic_darkness", label: "Harmonic darkness", format: "pct" },
+];
+
+/** Pitch-class names indexed 0-11. */
 export const KEY_NAMES = [
   "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
 ] as const;

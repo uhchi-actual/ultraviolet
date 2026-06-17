@@ -7,34 +7,33 @@ export interface LoudnessProfile {
   crest_factor: number;
 }
 
-export interface VocalCharacter {
-  pitch_range_low_hz: number | null;
-  pitch_range_high_hz: number | null;
-  pitch_median_hz: number | null;
-  timbre_brightness: number | null;
-  roughness: number | null;
-  breathiness: number | null;
+export interface StemProfile {
+  drums_presence: number;
+  bass_presence: number;
+  vocals_presence: number;
+  other_presence: number;
+  guitar_presence: number;
+  piano_presence: number;
 }
 
-export type InstrumentationProfile = Record<string, number>;
+export interface EmotionalArc {
+  values: number[];
+  label: string;
+}
 
 export interface IdentifierVector {
-  valence: number;
-  energy: number;
-  danceability: number;
-  acousticness: number;
   tempo: number;
   key: number;
   mode: number;
+  energy: number;
+  danceability: number;
   instrumentalness: number;
   loudness_profile: LoudnessProfile;
   texture_density: number;
-  emotional_arc: number[];
-  vocal_character: VocalCharacter | null;
   rhythmic_complexity: number;
-  production_aesthetic: number;
   harmonic_darkness: number;
-  instrumentation_profile: InstrumentationProfile;
+  stem_profile: StemProfile;
+  emotional_arc: EmotionalArc;
 }
 
 export interface AnalyzeResponse {

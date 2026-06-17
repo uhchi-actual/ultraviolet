@@ -9,6 +9,7 @@ import pytest
 
 pytest.importorskip("librosa")
 pytest.importorskip("soundfile")
+pytest.importorskip("demucs")
 
 import soundfile as sf  # noqa: E402
 
