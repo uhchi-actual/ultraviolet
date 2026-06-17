@@ -43,16 +43,16 @@ export const KEY_NAMES = [
   "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
 ] as const;
 
-/** Scalar identifiers (0-1) plotted on the radar. */
+/** Scalar identifiers (0-1) plotted on the radar, with listener-friendly labels. */
 export const RADAR_AXES: { key: string; label: string }[] = [
-  { key: "valence", label: "Valence" },
+  { key: "valence", label: "Positivity" },
   { key: "energy", label: "Energy" },
-  { key: "danceability", label: "Dance" },
+  { key: "danceability", label: "Groove" },
   { key: "acousticness", label: "Acoustic" },
-  { key: "instrumentalness", label: "Instrum." },
-  { key: "texture_density", label: "Texture" },
-  { key: "rhythmic_complexity", label: "Rhythm" },
-  { key: "production_aesthetic", label: "Prod." },
+  { key: "instrumentalness", label: "Instrumental" },
+  { key: "texture_density", label: "Density" },
+  { key: "rhythmic_complexity", label: "Complexity" },
+  { key: "production_aesthetic", label: "Hi-fi" },
   { key: "harmonic_darkness", label: "Darkness" },
 ];
 

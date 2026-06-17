@@ -45,8 +45,15 @@ def _pearson(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.sum(a * b) / denom)
 
 
-def _mean_chroma(y: np.ndarray, sr: int) -> np.ndarray:
-    chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
+def harmonic_chroma_mean(y: np.ndarray, sr: int) -> np.ndarray:
+    """Time-averaged chroma of the *harmonic* component.
+
+    Separating harmonics from percussion before chroma extraction keeps drums
+    and transients from polluting the pitch-class profile, which materially
+    reduces dominant/relative-key confusion in key estimation.
+    """
+    y_harmonic = librosa.effects.harmonic(y, margin=3.0)
+    chroma = librosa.feature.chroma_cqt(y=y_harmonic, sr=sr)
     return chroma.mean(axis=1)
 
 
@@ -71,8 +78,12 @@ def estimate_key_mode(chroma_mean: np.ndarray) -> tuple[int, int, float, float]:
     return int(np.argmax(minor_corrs)), 0, best_major, best_minor
 
 
-def extract_key_mode(y: np.ndarray, sr: int) -> tuple[int, int]:  # Identifier 6
-    key, mode, _, _ = estimate_key_mode(_mean_chroma(y, sr))
+def extract_key_mode(
+    y: np.ndarray, sr: int, chroma_mean: np.ndarray | None = None
+) -> tuple[int, int]:  # Identifier 6
+    if chroma_mean is None:
+        chroma_mean = harmonic_chroma_mean(y, sr)
+    key, mode, _, _ = estimate_key_mode(chroma_mean)
     return key, mode
 
 
@@ -94,8 +105,11 @@ def extract_energy(y: np.ndarray, sr: int) -> float:  # Identifier 2
     return _clip01(energy)
 
 
-def extract_valence(y: np.ndarray, sr: int) -> float:  # Identifier 1
-    chroma_mean = _mean_chroma(y, sr)
+def extract_valence(
+    y: np.ndarray, sr: int, chroma_mean: np.ndarray | None = None
+) -> float:  # Identifier 1
+    if chroma_mean is None:
+        chroma_mean = harmonic_chroma_mean(y, sr)
     _, mode, major_corr, minor_corr = estimate_key_mode(chroma_mean)
     centroid = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
     onset_env = librosa.onset.onset_strength(y=y, sr=sr)
@@ -205,8 +219,11 @@ def extract_production_aesthetic(y: np.ndarray, sr: int) -> float:  # Identifier
     return _clip01(aesthetic)
 
 
-def extract_harmonic_darkness(y: np.ndarray, sr: int) -> float:  # Identifier 14
-    chroma_mean = _mean_chroma(y, sr)
+def extract_harmonic_darkness(
+    y: np.ndarray, sr: int, chroma_mean: np.ndarray | None = None
+) -> float:  # Identifier 14
+    if chroma_mean is None:
+        chroma_mean = harmonic_chroma_mean(y, sr)
     _, mode, major_corr, minor_corr = estimate_key_mode(chroma_mean)
     minor_lean = _norm(minor_corr - major_corr, -0.3, 0.3)
 

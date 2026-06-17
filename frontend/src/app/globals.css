@@ -22,12 +22,13 @@
   --uv-plum: #7a0058;
   --uv-raspberry: #7a0045;
 
-  /* ── Functional surfaces — extracted from uhchi charcoal (#2d2d2d) ── */
-  --uv-bg-primary: #232323; /* app canvas */
-  --uv-bg-surface: #2c2c2c; /* cards / panels (≈ uhchi-bg) */
-  --uv-bg-elevated: #363636; /* elevated / hover */
-  --uv-border: #3d3d3d; /* subtle dividers */
-  --uv-border-strong: #4a4a4a; /* stronger outlines */
+  /* ── Functional surfaces — deep charcoal scale (≈2 shades darker than
+        uhchi #2d2d2d, per request) ── */
+  --uv-bg-primary: #141414; /* app canvas */
+  --uv-bg-surface: #1c1c1c; /* cards / panels */
+  --uv-bg-elevated: #262626; /* elevated / hover */
+  --uv-border: #2e2e2e; /* subtle dividers */
+  --uv-border-strong: #3a3a3a; /* stronger outlines */
 
   /* ── Text — neutral greys from the charcoal base ── */
   --uv-text-primary: #ededed;
@@ -133,8 +134,8 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(55rem 36rem at 50% -12rem, rgba(122, 0, 122, 0.16), transparent 70%),
-      radial-gradient(38rem 28rem at 88% -4rem, rgba(122, 0, 69, 0.1), transparent 70%);
+      radial-gradient(55rem 36rem at 50% -12rem, rgba(122, 0, 122, 0.13), transparent 70%),
+      radial-gradient(38rem 28rem at 88% -4rem, rgba(122, 0, 69, 0.08), transparent 70%);
   }
 
   ::selection {

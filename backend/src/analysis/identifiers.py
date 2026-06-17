@@ -45,19 +45,22 @@ def analyze_waveform(y, sr: int) -> IdentifierVector:
         extract_tempo,
         extract_texture_density,
         extract_valence,
+        harmonic_chroma_mean,
     )
     from src.analysis.emotional_arc import extract_emotional_arc
     from src.analysis.instruments import extract_instrumentation_profile
     from src.analysis.vocal_analysis import extract_vocal_character
 
-    key, mode = extract_key_mode(y, sr)
+    # Compute the harmonic chroma once and share it across the tonal extractors.
+    chroma_mean = harmonic_chroma_mean(y, sr)
+    key, mode = extract_key_mode(y, sr, chroma_mean)
     instrumentalness = extract_instrumentalness(y, sr)
 
     instrumentation = extract_instrumentation_profile(y, sr)
     instrumentation.vocals = round(float(min(max(1.0 - instrumentalness, 0.0), 1.0)), 3)
 
     return IdentifierVector(
-        valence=extract_valence(y, sr),
+        valence=extract_valence(y, sr, chroma_mean),
         energy=extract_energy(y, sr),
         danceability=extract_danceability(y, sr),
         acousticness=extract_acousticness(y, sr),
@@ -71,7 +74,7 @@ def analyze_waveform(y, sr: int) -> IdentifierVector:
         vocal_character=extract_vocal_character(y, sr, instrumentalness),
         rhythmic_complexity=extract_rhythmic_complexity(y, sr),
         production_aesthetic=extract_production_aesthetic(y, sr),
-        harmonic_darkness=extract_harmonic_darkness(y, sr),
+        harmonic_darkness=extract_harmonic_darkness(y, sr, chroma_mean),
         instrumentation_profile=instrumentation,
     )
 
