@@ -1,4 +1,4 @@
-/** Shared types mirroring the backend Pydantic/SQLModel schemas (PRD §9-10). */
+/** Shared types mirroring backend Pydantic schemas. */
 
 export interface LoudnessProfile {
   peak_db: number;
@@ -7,13 +7,11 @@ export interface LoudnessProfile {
   crest_factor: number;
 }
 
-export interface StemProfile {
-  drums_presence: number;
-  bass_presence: number;
-  vocals_presence: number;
-  other_presence: number;
-  guitar_presence: number;
-  piano_presence: number;
+export interface StemPresence {
+  drums_pct: number;
+  bass_pct: number;
+  other_pct: number;
+  vocals_pct: number;
 }
 
 export interface EmotionalArc {
@@ -32,7 +30,7 @@ export interface IdentifierVector {
   texture_density: number;
   rhythmic_complexity: number;
   harmonic_darkness: number;
-  stem_profile: StemProfile;
+  stem_presence: StemPresence;
   emotional_arc: EmotionalArc;
 }
 

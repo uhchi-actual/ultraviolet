@@ -37,6 +37,6 @@ def extract_emotional_arc(y: np.ndarray, sr: int) -> EmotionalArc:
         scores.append(round(intensity, 3))
 
     if max(scores) - min(scores) <= _VARIATION_THRESHOLD:
-        return EmotionalArc(values=[], label="Consistent throughout")
+        return EmotionalArc(values=[], label="Consistent intensity throughout")
 
     return EmotionalArc(values=scores, label="")

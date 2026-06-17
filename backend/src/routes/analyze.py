@@ -42,12 +42,14 @@ async def analyze(
 
     suffix = Path(filename).suffix or ".wav"
     tmp_path = ""
+    track_id = ""
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(data)
             tmp_path = tmp.name
 
-        vector = await analyze_track(tmp_path)
+        track_id = f"track_{uuid.uuid4().hex[:12]}"
+        vector = await analyze_track(tmp_path, track_id)
         y, _ = await asyncio.to_thread(load_audio, tmp_path)
         waveform = downsample_waveform(y)
     except HTTPException:
@@ -62,7 +64,7 @@ async def analyze(
             os.unlink(tmp_path)
 
     return {
-        "track_id": f"track_{uuid.uuid4().hex[:12]}",
+        "track_id": track_id,
         "title": title or Path(filename).stem,
         "artist": artist,
         "identifiers": vector.model_dump(),

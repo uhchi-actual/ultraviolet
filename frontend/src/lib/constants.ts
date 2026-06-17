@@ -1,4 +1,4 @@
-import type { IdentifierVector, StemProfile } from "./types";
+import type { IdentifierVector, StemPresence } from "./types";
 
 export const NAV_LINKS = [
   { href: "/radio", label: "Radio" },
@@ -40,24 +40,31 @@ export const IDENTIFIERS: IdentifierMeta[] = [
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-/** Demucs stem labels (presence 0–100). */
-export const STEM_LABELS: Record<keyof StemProfile, string> = {
-  drums_presence: "Drums",
-  bass_presence: "Bass",
-  vocals_presence: "Vocals",
-  other_presence: "Other",
-  guitar_presence: "Guitar",
-  piano_presence: "Piano",
-};
+/** Demucs stacked bar segments (PRD addendum colors). */
+export const STEM_SEGMENTS: {
+  key: keyof StemPresence;
+  label: string;
+  color: string;
+}[] = [
+  { key: "drums_pct", label: "Drums", color: "var(--uhchi-primary)" },
+  { key: "bass_pct", label: "Bass", color: "var(--uv-purple-bright)" },
+  { key: "other_pct", label: "Other", color: "var(--uv-indigo)" },
+  { key: "vocals_pct", label: "Vocals", color: "var(--uhchi-secondary)" },
+];
 
-/** Scalar identifiers shown on the Analyze page (all Demucs-backed or reliable DSP). */
-export const ANALYZE_METRICS: { key: keyof IdentifierVector; label: string; format: "pct" | "bpm" | "key" }[] = [
-  { key: "energy", label: "Energy", format: "pct" },
-  { key: "danceability", label: "Groove", format: "pct" },
-  { key: "instrumentalness", label: "Instrumental", format: "pct" },
-  { key: "texture_density", label: "Density", format: "pct" },
-  { key: "rhythmic_complexity", label: "Rhythm complexity", format: "pct" },
-  { key: "harmonic_darkness", label: "Harmonic darkness", format: "pct" },
+/** 11 reliable identifiers for the reduced DJ radar. */
+export const DJ_RADAR_AXES: { key: string; label: string; scale?: number }[] = [
+  { key: "energy", label: "Energy" },
+  { key: "danceability", label: "Groove" },
+  { key: "instrumentalness", label: "Instrumental" },
+  { key: "texture_density", label: "Density" },
+  { key: "rhythmic_complexity", label: "Complexity" },
+  { key: "harmonic_darkness", label: "Darkness" },
+  { key: "stem_presence.drums_pct", label: "Drums", scale: 100 },
+  { key: "stem_presence.bass_pct", label: "Bass", scale: 100 },
+  { key: "stem_presence.other_pct", label: "Other", scale: 100 },
+  { key: "stem_presence.vocals_pct", label: "Vocals", scale: 100 },
+  { key: "tempo", label: "Tempo", scale: 200 },
 ];
 
 /** Pitch-class names indexed 0-11. */

@@ -3,9 +3,10 @@ import type { ReactNode } from "react";
 import { KEY_NAMES } from "@/lib/constants";
 import type { AnalyzeResponse } from "@/lib/types";
 
+import { DjIdentifierRadar } from "@/components/radar/DjIdentifierRadar";
 import { EmotionalArcChart } from "./EmotionalArcChart";
-import { IdentifierMetrics } from "./IdentifierMetrics";
-import { StemBar } from "./StemBar";
+import { IdentifierGrid } from "./IdentifierGrid";
+import { StemStackedBar } from "./StemStackedBar";
 import { WaveformDisplay } from "./WaveformDisplay";
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
@@ -30,18 +31,10 @@ function Chip({ label, value }: { label: string; value: string }) {
   );
 }
 
-function keyLabel(key: number, mode: number): string {
-  return `${KEY_NAMES[key] ?? "?"} ${mode === 1 ? "major" : "minor"}`;
-}
-
 export function AnalysisResult({ data }: { data: AnalyzeResponse }) {
   const v = data.identifiers;
-  const instrumental =
-    v.instrumentalness >= 0.95
-      ? "Instrumental"
-      : v.instrumentalness <= 0.2
-        ? "Vocal"
-        : "Mixed";
+  const sp = v.stem_presence;
+  const keyLabel = `${KEY_NAMES[v.key] ?? "?"} ${v.mode === 1 ? "major" : "minor"}`;
   const showArc = v.emotional_arc.values.length > 0;
 
   return (
@@ -54,9 +47,9 @@ export function AnalysisResult({ data }: { data: AnalyzeResponse }) {
           </div>
           <div className="flex flex-wrap gap-2">
             <Chip label="Tempo" value={`${Math.round(v.tempo)} BPM`} />
-            <Chip label="Key" value={keyLabel(v.key, v.mode)} />
-            <Chip label="Type" value={instrumental} />
-            <Chip label="Energy" value={`${Math.round(v.energy * 100)}`} />
+            <Chip label="Key" value={keyLabel} />
+            <Chip label="Vocals stem" value={`${Math.round(sp.vocals_pct)}%`} />
+            <Chip label="Instrumental" value={`${Math.round(v.instrumentalness * 100)}%`} />
           </div>
         </div>
         <div className="mt-4">
@@ -64,20 +57,25 @@ export function AnalysisResult({ data }: { data: AnalyzeResponse }) {
         </div>
       </div>
 
-      <Panel title="Demucs stem breakdown">
-        <StemBar profile={v.stem_profile} />
+      <Panel title="Stem breakdown">
+        <StemStackedBar presence={sp} />
       </Panel>
 
-      <Panel title="Signal analysis">
-        <IdentifierMetrics vector={v} />
-      </Panel>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Panel title="Reliable identifiers">
+          <IdentifierGrid vector={v} />
+        </Panel>
+        <Panel title="Fingerprint (11 axes)">
+          <DjIdentifierRadar vector={v} />
+        </Panel>
+      </div>
 
       <Panel title="Emotional arc">
         {showArc ? (
           <>
             <EmotionalArcChart arc={v.emotional_arc.values} />
             <p className="mt-3 text-sm text-uv-text-secondary">
-              Intensity across four quarters of the track (full mix RMS).
+              Intensity across four quarters — shown only when variation exceeds 15%.
             </p>
           </>
         ) : (
@@ -86,7 +84,7 @@ export function AnalysisResult({ data }: { data: AnalyzeResponse }) {
       </Panel>
 
       <p className="text-center font-mono text-xs text-uv-text-muted">
-        Demucs htdemucs_ft + htdemucs_6s · per-stem librosa features
+        Demucs {v.stem_presence.vocals_pct < 5 ? "· instrumental detected" : ""} · librosa on isolated stems
       </p>
     </div>
   );
