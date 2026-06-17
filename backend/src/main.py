@@ -19,6 +19,13 @@ logger = logging.getLogger("ultraviolet")
 async def lifespan(app: FastAPI):
     logger.info("Ultraviolet backend starting up")
     logger.info("Ollama host: %s (model: %s)", settings.ollama_host, settings.ollama_model)
+    try:
+        from src.db.postgres import init_db
+
+        init_db()
+        logger.info("Database tables ensured")
+    except Exception as exc:  # noqa: BLE001 — boot even if the DB is unavailable
+        logger.warning("Skipped DB init (%s); profile features need PostgreSQL.", exc)
     yield
     logger.info("Ultraviolet backend shutting down")
 

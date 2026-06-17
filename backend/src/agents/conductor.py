@@ -31,7 +31,15 @@ class Conductor:
         self.host = host or settings.ollama_host
 
     async def chat(self, message: str, history: list[dict] | None = None) -> str:
-        messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
+        system = SYSTEM_PROMPT
+        soul_context = await self._soul_context()
+        if soul_context:
+            system += (
+                "\n\nWhat you know about this user from their listening data:\n"
+                f"{soul_context}"
+            )
+
+        messages: list[dict[str, str]] = [{"role": "system", "content": system}]
         if history:
             messages.extend(
                 {"role": turn.get("role", "user"), "content": turn.get("content", "")}
@@ -57,6 +65,16 @@ class Conductor:
         except httpx.HTTPError as exc:
             logger.warning("Ollama unreachable (%s); using fallback response.", exc)
             return self._fallback(message)
+
+    async def _soul_context(self) -> str | None:
+        """Best-effort SOUL taste summary; never blocks chat if unavailable."""
+        try:
+            from src.agents.soul import Soul
+
+            return await Soul().get_profile_summary()
+        except Exception as exc:  # noqa: BLE001 — chat must work without a profile
+            logger.debug("SOUL context unavailable: %s", exc)
+            return None
 
     def _fallback(self, message: str) -> str:
         return (

@@ -77,3 +77,35 @@ export interface HealthStatus {
   status: "healthy" | "degraded";
   services: Record<string, string>;
 }
+
+export interface GenreWeight {
+  genre: string;
+  weight: number;
+}
+
+export interface TopArtist {
+  artist: string;
+  plays: number;
+  hours: number;
+  skip_rate: number;
+}
+
+export interface ProfileResponse {
+  taste_vector: Record<string, number>;
+  top_genres: GenreWeight[];
+  top_artists: TopArtist[];
+  listening_heatmap: number[][];
+  taste_drift: Record<string, unknown>;
+  total_tracks_analyzed: number;
+  total_listening_hours: number;
+  last_updated: string;
+}
+
+export type IngestDataType = "spotify_history" | "playlist_export" | "personal_text";
+
+export interface IngestResponse {
+  status: string;
+  documents_processed: number;
+  chunks_created: number;
+  profile_updated: boolean;
+}

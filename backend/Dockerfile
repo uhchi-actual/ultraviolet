@@ -13,9 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml ./
 COPY src ./src
 
-# Core API + Phase 2 audio analysis stack (librosa/numpy/scipy/soundfile).
+# Core API + Phase 2 audio stack + Phase 3 vector-store client.
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir ".[audio]"
+    && pip install --no-cache-dir ".[audio,vectorstore]"
 
 EXPOSE 8000
 

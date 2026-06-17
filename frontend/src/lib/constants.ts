@@ -56,6 +56,28 @@ export const RADAR_AXES: { key: string; label: string }[] = [
   { key: "harmonic_darkness", label: "Darkness" },
 ];
 
+/** SOUL taste-vector dimensions → listener-friendly labels (15-axis radar). */
+export const TASTE_AXES: { key: string; label: string }[] = [
+  { key: "valence_weight", label: "Positivity" },
+  { key: "energy_weight", label: "Energy" },
+  { key: "danceability_weight", label: "Groove" },
+  { key: "acousticness_weight", label: "Acoustic" },
+  { key: "tempo_weight", label: "Tempo" },
+  { key: "key_mode_weight", label: "Tonality" },
+  { key: "instrumentalness_weight", label: "Instrumental" },
+  { key: "loudness_weight", label: "Dynamics" },
+  { key: "texture_density_weight", label: "Density" },
+  { key: "emotional_arc_weight", label: "Arc" },
+  { key: "vocal_character_weight", label: "Vocals" },
+  { key: "rhythmic_complexity_weight", label: "Complexity" },
+  { key: "production_aesthetic_weight", label: "Hi-fi" },
+  { key: "harmonic_darkness_weight", label: "Darkness" },
+  { key: "instrumentation_weight", label: "Instruments" },
+];
+
+/** Day-of-week labels for the listening heatmap rows (Mon-first). */
+export const HEATMAP_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
 /** Human labels for the 12 instrumentation-profile categories (Identifier 15). */
 export const INSTRUMENT_LABELS: Record<string, string> = {
   synth: "Synth",

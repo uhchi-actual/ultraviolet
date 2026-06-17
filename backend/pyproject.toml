@@ -24,10 +24,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Multi-agent orchestration + vector store (Phase 3/4).
+# Vector store client (Phase 3 RAG). chromadb-client is the thin HTTP client
+# (no onnxruntime/server deps) that speaks the Chroma v2 API.
+vectorstore = [
+    "chromadb-client>=1.0",
+]
+# Multi-agent orchestration (Phase 4).
 agents = [
     "langgraph>=0.2",
-    "chromadb>=0.5",
 ]
 # Audio analysis pipeline (Phase 2). librosa/numpy/scipy/soundfile are
 # cross-platform and install cleanly on both Windows and the Linux container.

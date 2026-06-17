@@ -28,6 +28,8 @@ def test_chat_returns_response():
     assert resp.json()["response"]  # non-empty (real reply or graceful fallback)
 
 
-def test_unimplemented_route_returns_501():
+def test_profile_requires_ingestion():
+    # Without ingested data (and no DB in the test env) the profile is absent:
+    # 404 when reachable-but-empty, 503 when the profile store is unavailable.
     resp = client.get("/api/profile")
-    assert resp.status_code == 501
+    assert resp.status_code in (404, 503)
