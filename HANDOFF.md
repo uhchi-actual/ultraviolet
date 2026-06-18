@@ -96,12 +96,26 @@ cd D:\projects\ultraviolet\frontend
 npm run build
 ```
 
-### Publish to GitHub Pages
+### Publish to GitHub Pages (one-time setup)
+
+**If not logged in:**
+```powershell
+gh auth login
+# Choose: GitHub.com → HTTPS → Login with browser
+```
+
+**Then publish:**
 ```powershell
 cd D:\projects\ultraviolet
 .\scripts\publish-github.ps1
 ```
-Or manually: `gh auth login` → push `main` → Settings → Pages → **GitHub Actions**.
+
+This creates `uhchi-actual/ultraviolet`, pushes `main`, and triggers the Pages workflow.
+
+**Enable Pages (first deploy only):**  
+https://github.com/uhchi-actual/ultraviolet/settings/pages → **GitHub Actions**
+
+**Verify:** https://uhchi-actual.github.io/ultraviolet/tree/ after CI finishes (~2 min).
 
 ---
 
