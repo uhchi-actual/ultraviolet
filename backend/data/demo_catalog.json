@@ -1,0 +1,134 @@
+[
+  {
+    "track_id": "demo_plainsong",
+    "title": "Plainsong",
+    "artist": "The Cure",
+    "popularity_score": 420,
+    "play_count": 134,
+    "source": "demo",
+    "identifiers": {
+      "tempo": 72.0,
+      "key": 9,
+      "mode": 0,
+      "energy": 0.42,
+      "danceability": 0.38,
+      "instrumentalness": 0.12,
+      "loudness_profile": { "peak_db": -4.2, "rms_db": -14.8, "dynamic_range": 8.1, "crest_factor": 2.4 },
+      "texture_density": 0.68,
+      "rhythmic_complexity": 0.31,
+      "harmonic_darkness": 0.79,
+      "stem_presence": { "drums_pct": 18.0, "bass_pct": 22.0, "other_pct": 48.0, "vocals_pct": 12.0 },
+      "emotional_arc": { "values": [], "label": "Consistent intensity throughout" }
+    }
+  },
+  {
+    "track_id": "demo_bela",
+    "title": "Bela Lugosi's Dead",
+    "artist": "Bauhaus",
+    "popularity_score": 380,
+    "play_count": 89,
+    "source": "demo",
+    "identifiers": {
+      "tempo": 118.0,
+      "key": 4,
+      "mode": 0,
+      "energy": 0.55,
+      "danceability": 0.52,
+      "instrumentalness": 0.08,
+      "loudness_profile": { "peak_db": -2.1, "rms_db": -11.5, "dynamic_range": 6.2, "crest_factor": 2.1 },
+      "texture_density": 0.74,
+      "rhythmic_complexity": 0.48,
+      "harmonic_darkness": 0.88,
+      "stem_presence": { "drums_pct": 24.0, "bass_pct": 28.0, "other_pct": 38.0, "vocals_pct": 10.0 },
+      "emotional_arc": { "values": [0.3, 0.5, 0.7, 0.6], "label": "Slow burn" }
+    }
+  },
+  {
+    "track_id": "demo_ceremony",
+    "title": "Ceremony",
+    "artist": "New Order",
+    "popularity_score": 890,
+    "play_count": 201,
+    "source": "demo",
+    "identifiers": {
+      "tempo": 132.0,
+      "key": 2,
+      "mode": 1,
+      "energy": 0.78,
+      "danceability": 0.81,
+      "instrumentalness": 0.05,
+      "loudness_profile": { "peak_db": -0.8, "rms_db": -9.2, "dynamic_range": 5.4, "crest_factor": 1.9 },
+      "texture_density": 0.62,
+      "rhythmic_complexity": 0.44,
+      "harmonic_darkness": 0.41,
+      "stem_presence": { "drums_pct": 30.0, "bass_pct": 20.0, "other_pct": 42.0, "vocals_pct": 8.0 },
+      "emotional_arc": { "values": [], "label": "Consistent intensity throughout" }
+    }
+  },
+  {
+    "track_id": "demo_warm_leatherette",
+    "title": "Warm Leatherette",
+    "artist": "The Normal",
+    "popularity_score": 210,
+    "play_count": 42,
+    "source": "demo",
+    "identifiers": {
+      "tempo": 128.0,
+      "key": 7,
+      "mode": 0,
+      "energy": 0.71,
+      "danceability": 0.76,
+      "instrumentalness": 0.92,
+      "loudness_profile": { "peak_db": -1.5, "rms_db": -10.8, "dynamic_range": 4.8, "crest_factor": 1.7 },
+      "texture_density": 0.58,
+      "rhythmic_complexity": 0.52,
+      "harmonic_darkness": 0.55,
+      "stem_presence": { "drums_pct": 28.0, "bass_pct": 24.0, "other_pct": 46.0, "vocals_pct": 2.0 },
+      "emotional_arc": { "values": [], "label": "Consistent intensity throughout" }
+    }
+  },
+  {
+    "track_id": "demo_disintegration",
+    "title": "Disintegration",
+    "artist": "The Cure",
+    "popularity_score": 510,
+    "play_count": 167,
+    "source": "demo",
+    "identifiers": {
+      "tempo": 68.0,
+      "key": 9,
+      "mode": 0,
+      "energy": 0.48,
+      "danceability": 0.35,
+      "instrumentalness": 0.18,
+      "loudness_profile": { "peak_db": -3.5, "rms_db": -13.2, "dynamic_range": 9.0, "crest_factor": 2.6 },
+      "texture_density": 0.82,
+      "rhythmic_complexity": 0.29,
+      "harmonic_darkness": 0.91,
+      "stem_presence": { "drums_pct": 16.0, "bass_pct": 20.0, "other_pct": 52.0, "vocals_pct": 12.0 },
+      "emotional_arc": { "values": [0.2, 0.4, 0.8, 0.7], "label": "Slow burn" }
+    }
+  },
+  {
+    "track_id": "demo_seventeen_seconds",
+    "title": "A Forest",
+    "artist": "The Cure",
+    "popularity_score": 720,
+    "play_count": 98,
+    "source": "demo",
+    "identifiers": {
+      "tempo": 124.0,
+      "key": 1,
+      "mode": 0,
+      "energy": 0.62,
+      "danceability": 0.58,
+      "instrumentalness": 0.1,
+      "loudness_profile": { "peak_db": -2.8, "rms_db": -10.5, "dynamic_range": 6.8, "crest_factor": 2.0 },
+      "texture_density": 0.71,
+      "rhythmic_complexity": 0.41,
+      "harmonic_darkness": 0.72,
+      "stem_presence": { "drums_pct": 26.0, "bass_pct": 24.0, "other_pct": 40.0, "vocals_pct": 10.0 },
+      "emotional_arc": { "values": [], "label": "Consistent intensity throughout" }
+    }
+  }
+]

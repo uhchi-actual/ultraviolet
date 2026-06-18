@@ -7,7 +7,7 @@ export default function AnalyzePage() {
       <PageHeader
         eyebrow="DJ agent"
         title="Analyze"
-        description="Upload a track and the DJ agent separates it with Demucs (drums, bass, vocals, other, guitar, piano), then measures only identifiers we can back with real stem data. No guesses, no metadata."
+        description="Upload a track. Demucs separates drums, bass, vocals, and other — then we measure only what the stems actually support."
       />
       <AnalyzePanel />
     </div>

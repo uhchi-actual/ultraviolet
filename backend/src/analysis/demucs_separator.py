@@ -9,6 +9,7 @@ Stems cached at ``{stem_cache_dir}/{track_id}/drums.wav`` etc.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -58,17 +59,56 @@ def _save_stem_wav(path: Path, mono: np.ndarray, sr: int) -> None:
 
 
 def _load_audio(path: str, target_sr: int) -> tuple:
-    import torchaudio
+    """Load stereo audio for Demucs without torchaudio (avoids torchcodec on torch 2.11+)."""
+    import librosa
+    import torch
 
-    wav, sr = torchaudio.load(path)
-    if wav.shape[0] == 1:
-        wav = wav.repeat(2, 1)
-    elif wav.shape[0] > 2:
-        wav = wav[:2]
+    from src.utils.audio_io import prepare_audio_path
+
+    prepared, is_temp = prepare_audio_path(path)
+    try:
+        data, sr = librosa.load(prepared, sr=None, mono=False, dtype=np.float32)
+    finally:
+        if is_temp and os.path.exists(prepared):
+            os.unlink(prepared)
+    if data.ndim == 1:
+        wav_np = np.stack([data, data])
+    elif data.shape[0] == 1:
+        wav_np = np.repeat(data, 2, axis=0)
+    else:
+        wav_np = data[:2]
+
     if sr != target_sr:
-        wav = torchaudio.functional.resample(wav, sr, target_sr)
+        wav_np = librosa.resample(wav_np, orig_sr=sr, target_sr=target_sr)
+
+    wav = torch.from_numpy(np.ascontiguousarray(wav_np, dtype=np.float32))
     mix_mono = wav.mean(dim=0).numpy().astype(np.float32)
     return wav, target_sr, mix_mono
+
+
+def _cuda_usable() -> bool:
+    """True only if CUDA kernels can actually run (RTX 50-series needs PyTorch cu128)."""
+    import torch
+
+    if not torch.cuda.is_available():
+        return False
+    try:
+        torch.zeros(1, device="cuda")
+        return True
+    except RuntimeError:
+        return False
+
+
+def _resolve_device(requested: str) -> str:
+    if requested != "cuda":
+        return requested
+    if _cuda_usable():
+        return "cuda"
+    logger.warning(
+        "CUDA GPU present but unusable with this PyTorch build "
+        "(RTX 50-series / sm_120 needs torch 2.7+ cu128). Using CPU — slower but works."
+    )
+    return "cpu"
 
 
 def _run_demucs(model_name: str, wav, device: str) -> dict[str, object]:
@@ -79,16 +119,33 @@ def _run_demucs(model_name: str, wav, device: str) -> dict[str, object]:
     model = get_model(model_name)
     model.to(device)
     model.eval()
-    with torch.no_grad():
-        sources = apply_model(
-            model,
-            wav[None].to(device),
-            device=device,
-            shifts=1,
-            split=True,
-            overlap=0.25,
-            progress=False,
-        )
+    try:
+        with torch.no_grad():
+            sources = apply_model(
+                model,
+                wav[None].to(device),
+                device=device,
+                shifts=1,
+                split=True,
+                overlap=0.25,
+                progress=False,
+            )
+    except RuntimeError as exc:
+        if device != "cuda":
+            raise
+        logger.warning("Demucs CUDA failed (%s); retrying on CPU.", exc)
+        device = "cpu"
+        model.to(device)
+        with torch.no_grad():
+            sources = apply_model(
+                model,
+                wav[None].to(device),
+                device=device,
+                shifts=1,
+                split=True,
+                overlap=0.25,
+                progress=False,
+            )
     names = list(model.sources)
     out = {names[i]: sources[0, i] for i in range(len(names))}
     del model
@@ -103,16 +160,12 @@ def separate_track(
     model_name: str | None = None,
 ) -> SeparatedStems:
     """Separate audio with Demucs; load from ``data/stems/{track_id}/`` when cached."""
-    import torch
     from demucs.pretrained import get_model
 
     unload_ollama_models()
 
     model_name = model_name or settings.demucs_model
-    device = settings.demucs_device
-    if device == "cuda" and not torch.cuda.is_available():
-        logger.warning("CUDA unavailable; Demucs will run on CPU (5–10× slower).")
-        device = "cpu"
+    device = _resolve_device(settings.demucs_device)
 
     ref = get_model(model_name)
     sr = int(ref.samplerate)

@@ -27,7 +27,7 @@ class EmotionalArc(BaseModel):
 
 
 class IdentifierVector(BaseModel):
-    """11 reliable identifiers from Demucs stems + librosa on isolated stems."""
+    """Demucs stems + librosa identifiers and optional spectral embedding."""
 
     tempo: float = Field(default=0.0, ge=0.0)
     key: int = Field(default=0, ge=0, le=11)
@@ -35,12 +35,18 @@ class IdentifierVector(BaseModel):
     energy: float = Field(default=0.0, ge=0.0, le=1.0)
     danceability: float = Field(default=0.0, ge=0.0, le=1.0)
     instrumentalness: float = Field(default=0.0, ge=0.0, le=1.0)
+    valence: float = Field(default=0.5, ge=0.0, le=1.0)
+    acousticness: float = Field(default=0.5, ge=0.0, le=1.0)
     loudness_profile: LoudnessProfile = Field(default_factory=LoudnessProfile)
     texture_density: float = Field(default=0.0, ge=0.0, le=1.0)
     rhythmic_complexity: float = Field(default=0.0, ge=0.0, le=1.0)
     harmonic_darkness: float = Field(default=0.0, ge=0.0, le=1.0)
     stem_presence: StemPresence = Field(default_factory=StemPresence)
     emotional_arc: EmotionalArc = Field(default_factory=EmotionalArc)
+    spectral_embedding: list[float] = Field(
+        default_factory=list,
+        description="L2-normalized chroma+MFCC vector for local fingerprint retrieval",
+    )
 
 
 class UserTasteVector(BaseModel):

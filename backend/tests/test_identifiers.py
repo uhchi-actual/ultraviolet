@@ -16,7 +16,7 @@ from src.models.identifiers import EmotionalArc, IdentifierVector, StemPresence
 
 
 def test_identifier_names_count():
-    assert len(IDENTIFIER_NAMES) == 11
+    assert len(IDENTIFIER_NAMES) == 14
 
 
 def test_stem_presence_has_four_fields():

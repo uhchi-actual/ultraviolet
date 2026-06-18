@@ -9,7 +9,11 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../.env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # ── Database ──
     database_url: str = "postgresql://ultraviolet:ultraviolet@localhost:5432/ultraviolet"
@@ -25,8 +29,17 @@ class Settings(BaseSettings):
 
     # ── Demucs (DJ stem separation) — cache on D: drive by default ──
     stem_cache_dir: str = "D:/ultraviolet-data/stems"
+    catalog_dir: str = "D:/ultraviolet-data/catalog"
+    session_dir: str = "D:/ultraviolet-data/sessions"
     demucs_model: str = "htdemucs"  # or htdemucs_ft for higher quality (4× slower)
     demucs_device: str = "cuda"
+
+    # ── NicheSearch (optional streaming — off by default) ──
+    spotify_client_id: str = ""
+    spotify_client_secret: str = ""
+    soundcloud_client_id: str = "iZIs9mpkhJqVeWKrX9R1FL2h"
+    enable_streaming_identity: bool = False
+    enable_streaming_niche: bool = False
 
     # ── CORS ──
     # NoDecode: stop pydantic-settings from JSON-parsing the env var so the

@@ -26,15 +26,35 @@ def cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
     return dot / (norm_a * norm_b)
 
 
+def weighted_cosine_similarity(
+    vec_a: Sequence[float],
+    vec_b: Sequence[float],
+    weights: Sequence[float],
+) -> float:
+    """Weighted cosine similarity (Adiyansjah et al. 2019; McFee & Lanckriet)."""
+    weighted_a = [v * w for v, w in zip(vec_a, weights, strict=True)]
+    weighted_b = [v * w for v, w in zip(vec_b, weights, strict=True)]
+    return cosine_similarity(weighted_a, weighted_b)
+
+
 def weighted_similarity(
     seed_vector: Sequence[float],
     candidate_vector: Sequence[float],
     user_weights: Sequence[float],
 ) -> float:
-    """Weighted cosine similarity, biased by the user's identifier preferences."""
-    weighted_seed = [v * w for v, w in zip(seed_vector, user_weights, strict=True)]
-    weighted_candidate = [v * w for v, w in zip(candidate_vector, user_weights, strict=True)]
-    return cosine_similarity(weighted_seed, weighted_candidate)
+    """Alias for weighted_cosine_similarity."""
+    return weighted_cosine_similarity(seed_vector, candidate_vector, user_weights)
+
+
+def similarity_between_tracks(
+    seed: object,
+    candidate: object,
+    user_weights: Sequence[float] | None = None,
+) -> float:
+    """Preferred path: perceptual similarity on full IdentifierVector payloads."""
+    from src.recommendation.perceptual_distance import perceptual_similarity
+
+    return perceptual_similarity(seed, candidate, user_weights)
 
 
 def apply_obscurity_bonus(
@@ -47,6 +67,8 @@ def apply_obscurity_bonus(
 
     ``obscurity_dial``: 0.0 = no bonus (mainstream only), 1.0 = maximum obscurity.
     """
+    if max_play_count <= 0:
+        return similarity_score
     obscurity_factor = obscurity_dial * math.log(max_play_count / max(track_play_count, 1))
     return similarity_score * (1 + obscurity_factor)
 

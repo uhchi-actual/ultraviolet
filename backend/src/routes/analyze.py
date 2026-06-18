@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import tempfile
 import uuid
@@ -12,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 router = APIRouter()
+logger = logging.getLogger("ultraviolet.analyze")
 
 # Guard against oversized uploads (50 MB).
 _MAX_BYTES = 50 * 1024 * 1024
@@ -30,7 +32,7 @@ async def analyze(
     if not is_supported_format(filename):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported format. Use MP3, FLAC, WAV, OGG, or M4A.",
+            detail="Unsupported format. Use MP3, FLAC, WAV, OGG, M4A, or WebM.",
         )
 
     data = await file.read()
@@ -50,23 +52,41 @@ async def analyze(
 
         track_id = f"track_{uuid.uuid4().hex[:12]}"
         vector = await analyze_track(tmp_path, track_id)
-        y, _ = await asyncio.to_thread(load_audio, tmp_path)
+        # Waveform preview — librosa only (never torchaudio/torchcodec).
+        y, _ = await asyncio.to_thread(load_audio, tmp_path, 22050)
         waveform = downsample_waveform(y)
+
+        from src.recommendation.catalog import upsert_track
+
+        stem = Path(filename).stem
+        catalog_title = title or ("" if stem.startswith(("listen-", "track_")) else stem)
+        upsert_track(
+            track_id,
+            catalog_title or "Identified track",
+            artist or "",
+            vector,
+            source="user_upload",
+        )
     except HTTPException:
         raise
     except Exception as exc:  # noqa: BLE001 — surface a clean 422 for bad audio
+        msg = str(exc).strip() or repr(exc)
+        logger.exception("Analyze failed for %s", filename)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Could not analyze audio: {exc}",
+            detail=f"Could not analyze audio: {msg}",
         ) from exc
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
+    stem = Path(filename).stem
+    display_title = title or ("" if stem.startswith(("listen-", "track_")) else stem)
+
     return {
         "track_id": track_id,
-        "title": title or Path(filename).stem,
-        "artist": artist,
+        "title": display_title,
+        "artist": artist or None,
         "identifiers": vector.model_dump(),
         "waveform_data": waveform,
     }

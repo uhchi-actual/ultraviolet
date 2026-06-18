@@ -26,6 +26,9 @@ export interface IdentifierVector {
   energy: number;
   danceability: number;
   instrumentalness: number;
+  valence?: number;
+  acousticness?: number;
+  spectral_embedding?: number[];
   loudness_profile: LoudnessProfile;
   texture_density: number;
   rhythmic_complexity: number;
@@ -40,6 +43,54 @@ export interface AnalyzeResponse {
   artist: string | null;
   identifiers: IdentifierVector;
   waveform_data: number[];
+}
+
+export interface BatchAnalyzeEvent {
+  status: string;
+  total_files?: number;
+  completed?: number;
+  skipped?: number;
+  current_file?: string;
+  total_analyzed?: number;
+  catalog_size?: number;
+  duration_seconds?: number;
+  removed?: number;
+  embeddings_rebuilt?: number;
+  errors?: { file: string; error: string }[];
+  message?: string;
+}
+
+export interface NicheSearchHit {
+  title: string;
+  artist: string;
+  url: string;
+  source: "spotify" | "youtube" | "soundcloud" | "itunes" | "ultraviolet";
+  query: string;
+  match_reason: string;
+  confidence: number;
+  kind?: "identity" | "niche";
+}
+
+export interface NicheSearchSourceResult {
+  source: string;
+  status: "ok" | "empty" | "skipped";
+  message?: string | null;
+  hits: NicheSearchHit[];
+}
+
+export interface NicheSearchResponse {
+  track_id: string | null;
+  queries: string[];
+  identity_queries?: string[];
+  niche_queries?: string[];
+  stem_hints: string[];
+  sources: NicheSearchSourceResult[];
+  identity_hits?: NicheSearchHit[];
+  niche_hits?: NicheSearchHit[];
+  top_hits: NicheSearchHit[];
+  identity_guess?: { title: string; artist: string; source: string } | null;
+  local_only?: boolean;
+  elapsed_ms: number;
 }
 
 export interface ChatTurn {
@@ -68,6 +119,57 @@ export interface Recommendation {
   confidence: number;
   identifiers?: Partial<IdentifierVector>;
   tree_chain?: TreeChainItem[];
+  recommendation_type?: "direct" | "bridge" | "discovery_quota";
+  bridge_via?: { track_id: string; title: string; artist: string };
+}
+
+export interface RadioResponse {
+  seed: {
+    track_id: string;
+    title: string;
+    artist: string;
+    play_count?: number;
+    identifiers: IdentifierVector;
+  };
+  recommendations: Recommendation[];
+  obscurity_dial: number;
+  tree?: TreeGraph;
+}
+
+export interface TreeNode {
+  id: string;
+  title: string;
+  artist: string;
+  type: "seed" | "library" | "ai_recommendation";
+  confidence?: number;
+  plays?: number;
+  genre_bucket?: string;
+  why_summary?: string;
+  why_details?: string[];
+  recommendation_type?: string;
+  identifiers?: Partial<IdentifierVector>;
+}
+
+export interface TreeEdge {
+  source: string;
+  target: string;
+  weight: number;
+  kind?: "trunk" | "root";
+}
+
+export interface TreeGraph {
+  nodes: TreeNode[];
+  edges: TreeEdge[];
+  layout_seed?: number;
+}
+
+export interface CatalogTrack {
+  track_id: string;
+  title: string;
+  artist: string;
+  popularity_score: number;
+  play_count: number;
+  source: string;
 }
 
 export interface HealthStatus {

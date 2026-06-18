@@ -1,4 +1,4 @@
-"""Master DJ pipeline: Demucs separation → per-stem librosa → 11 identifiers."""
+"""Master DJ pipeline: Demucs separation → per-stem librosa → identifiers + spectral embedding."""
 
 from __future__ import annotations
 
@@ -13,17 +13,21 @@ IDENTIFIER_NAMES: list[str] = [
     "energy",
     "danceability",
     "instrumentalness",
+    "valence",
+    "acousticness",
     "loudness_profile",
     "texture_density",
     "rhythmic_complexity",
     "harmonic_darkness",
     "stem_presence",
     "emotional_arc",
+    "spectral_embedding",
 ]
 
 
 def analyze_stems(stems) -> IdentifierVector:
     from src.analysis.audio_features import (
+        extract_acousticness,
         extract_danceability,
         extract_energy,
         extract_harmonic_darkness,
@@ -32,10 +36,12 @@ def analyze_stems(stems) -> IdentifierVector:
         extract_rhythmic_complexity,
         extract_tempo,
         extract_texture_density,
+        extract_valence,
         harmonic_chroma_mean,
     )
     from src.analysis.demucs_separator import SeparatedStems
     from src.analysis.emotional_arc import extract_emotional_arc
+    from src.analysis.spectral_embedding import extract_spectral_embedding
     from src.analysis.stem_energy import (
         build_stem_presence,
         instrumentalness_from_vocals_pct,
@@ -72,12 +78,15 @@ def analyze_stems(stems) -> IdentifierVector:
         energy=extract_energy(y, sr),
         danceability=extract_danceability(stems.drums, sr),
         instrumentalness=instrumentalness,
+        valence=extract_valence(y, sr, chroma),
+        acousticness=extract_acousticness(y, sr),
         loudness_profile=extract_loudness_profile(y, sr),
         texture_density=extract_texture_density(y, sr),
         rhythmic_complexity=extract_rhythmic_complexity(stems.drums, sr),
         harmonic_darkness=extract_harmonic_darkness(harmonic, sr, chroma),
         stem_presence=stem_presence,
         emotional_arc=extract_emotional_arc(y, sr),
+        spectral_embedding=extract_spectral_embedding(harmonic, sr),
     )
 
 

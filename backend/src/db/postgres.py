@@ -19,7 +19,12 @@ if TYPE_CHECKING:
 def get_engine() -> Engine:
     from sqlmodel import create_engine
 
-    return create_engine(settings.sqlalchemy_url, echo=False, pool_pre_ping=True)
+    return create_engine(
+        settings.sqlalchemy_url,
+        echo=False,
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": 3},
+    )
 
 
 def init_db() -> None:

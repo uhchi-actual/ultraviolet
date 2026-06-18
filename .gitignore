@@ -26,6 +26,12 @@ htmlcov/
 .env
 .env.local
 .env.*.local
+*.pem
+*.key
+secrets/
+
+# ─── Local data (D: drive caches — never publish) ───
+ultraviolet-data/
 
 # ─── Data (keep structure, ignore contents) ───
 data/audio/*

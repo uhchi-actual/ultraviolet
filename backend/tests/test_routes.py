@@ -33,3 +33,14 @@ def test_profile_requires_ingestion():
     # 404 when reachable-but-empty, 503 when the profile store is unavailable.
     resp = client.get("/api/profile")
     assert resp.status_code in (404, 503)
+
+
+def test_catalog_lists_tracks():
+    resp = client.get("/api/catalog")
+    assert resp.status_code == 200
+    assert "tracks" in resp.json()
+
+
+def test_radio_unknown_seed():
+    resp = client.post("/api/radio", json={"seed_track_id": "nonexistent_xyz"})
+    assert resp.status_code == 404

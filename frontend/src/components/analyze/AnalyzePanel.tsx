@@ -1,12 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { analyzeTrack } from "@/lib/api";
 import type { AnalyzeResponse } from "@/lib/types";
 
 import { AnalysisResult } from "./AnalysisResult";
+import { BatchImportPanel } from "./BatchImportPanel";
+import { ListenCapture } from "./ListenCapture";
 import { UploadZone } from "./UploadZone";
+
+const LAST_SEED_KEY = "ultraviolet_last_seed";
 
 export function AnalyzePanel() {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
@@ -19,7 +24,9 @@ export function AnalyzePanel() {
     setError(null);
     setFileName(file.name);
     try {
-      setResult(await analyzeTrack(file));
+      const data = await analyzeTrack(file);
+      setResult(data);
+      localStorage.setItem(LAST_SEED_KEY, data.track_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed.");
       setResult(null);
@@ -31,6 +38,27 @@ export function AnalyzePanel() {
   return (
     <div className="space-y-5">
       <UploadZone onFile={handleFile} disabled={loading} />
+
+      <BatchImportPanel />
+
+      <ListenCapture
+        disabled={loading}
+        onAnalyzing={() => {
+          setLoading(true);
+          setFileName("Captured audio");
+        }}
+        onResult={(data) => {
+          setLoading(false);
+          setResult(data);
+          setError(null);
+          localStorage.setItem(LAST_SEED_KEY, data.track_id);
+        }}
+        onError={(msg) => {
+          setLoading(false);
+          setError(msg);
+          setResult(null);
+        }}
+      />
 
       {loading ? (
         <div className="flex items-center gap-3 rounded-xl border border-uv-border bg-uv-bg-surface/70 p-5 text-sm text-uv-text-secondary">
@@ -45,7 +73,17 @@ export function AnalyzePanel() {
         </div>
       ) : null}
 
-      {result && !loading ? <AnalysisResult data={result} /> : null}
+      {result && !loading ? (
+        <>
+          <AnalysisResult data={result} />
+          <p className="text-center text-sm text-uv-text-secondary">
+            Analysis saved.{" "}
+            <Link href="/radio" className="text-uhchi-secondary underline-offset-4 hover:underline">
+              Use as Radio seed
+            </Link>
+          </p>
+        </>
+      ) : null}
     </div>
   );
 }

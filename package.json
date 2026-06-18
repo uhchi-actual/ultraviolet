@@ -1,0 +1,13 @@
+{
+  "name": "ultraviolet",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c blue,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "node scripts/run-backend.mjs",
+    "dev:frontend": "node scripts/run-frontend.mjs",
+    "install:all": "npm install && npm install --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -4,6 +4,7 @@ import { KEY_NAMES } from "@/lib/constants";
 import type { AnalyzeResponse } from "@/lib/types";
 
 import { DjIdentifierRadar } from "@/components/radar/DjIdentifierRadar";
+import { NicheSearchPanel } from "./NicheSearchPanel";
 import { EmotionalArcChart } from "./EmotionalArcChart";
 import { IdentifierGrid } from "./IdentifierGrid";
 import { StemStackedBar } from "./StemStackedBar";
@@ -82,6 +83,8 @@ export function AnalysisResult({ data }: { data: AnalyzeResponse }) {
           <p className="font-display text-base text-uv-text-primary">{v.emotional_arc.label}</p>
         )}
       </Panel>
+
+      <NicheSearchPanel data={data} />
 
       <p className="text-center font-mono text-xs text-uv-text-muted">
         Demucs {v.stem_presence.vocals_pct < 5 ? "· instrumental detected" : ""} · librosa on isolated stems
