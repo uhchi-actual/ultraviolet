@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import random
 
+import numpy as np
+
 from src.models.identifiers import IdentifierVector, LoudnessProfile, StemPresence
 from src.recommendation.similarity_engine import recommend_branches, score_catalog
+
+_EMB = (np.ones(512, dtype=np.float32) / np.sqrt(512)).tolist()
 
 
 def _vector(**kwargs) -> IdentifierVector:
@@ -32,6 +36,8 @@ def _track(tid: str, title: str, artist: str, **vec_kwargs) -> dict:
         "title": title,
         "artist": artist,
         "popularity_score": 100,
+        "clap_embedding": _EMB,
+        "genres": [10],
         "identifiers": _vector(**vec_kwargs).model_dump(),
     }
 

@@ -2,19 +2,27 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
+import numpy as np
 
 from src.models.identifiers import IdentifierVector, LoudnessProfile, StemPresence
 from src.recommendation.manual_tree import build_manual_tree
 
 
+_BASE_EMB = np.random.default_rng(42).standard_normal(512).astype(np.float32)
+_BASE_EMB = _BASE_EMB / np.linalg.norm(_BASE_EMB)
+
+
 def _track(i: int, *, tempo: float, key: int, energy: float) -> dict:
+    noise = np.random.default_rng(i).standard_normal(512).astype(np.float32) * 0.04
+    emb = _BASE_EMB + noise
+    emb = emb / np.linalg.norm(emb)
     return {
         "track_id": f"synth_{i:03d}",
         "title": f"Track {i}",
         "artist": f"Artist {i % 12}",
-        "source": "test",
+        "source": "fma",
+        "genres": [10 + (i % 20)],
+        "clap_embedding": emb.tolist(),
         "identifiers": IdentifierVector(
             tempo=tempo,
             key=key % 12,
@@ -38,7 +46,7 @@ def _track(i: int, *, tempo: float, key: int, energy: float) -> dict:
     }
 
 
-def test_tree_reaches_40_plus_nodes_with_large_catalog(monkeypatch, tmp_path):
+def test_tree_reaches_40_plus_nodes_with_large_catalog(monkeypatch):
     tracks = [_track(i, tempo=80 + (i % 40), key=i % 12, energy=0.3 + (i % 10) * 0.06) for i in range(60)]
     seed = tracks[0]
     seed["title"] = "Ceremony"
@@ -46,9 +54,8 @@ def test_tree_reaches_40_plus_nodes_with_large_catalog(monkeypatch, tmp_path):
     seed["track_id"] = "seed_ceremony"
     tracks[0] = seed
 
-    cat = tmp_path / "tracks.json"
-    cat.write_text(json.dumps(tracks))
-    monkeypatch.setattr("src.recommendation.catalog._catalog_path", lambda: cat)
+    monkeypatch.setattr("src.recommendation.manual_tree.recommendation_pool", lambda: tracks)
+    monkeypatch.setattr("src.recommendation.catalog_lookup.list_tracks", lambda: [seed])
 
     result = build_manual_tree([{"title": "Ceremony", "artist": "New Order"}], recs_per_seed=8)
     node_count = len(result["tree"]["nodes"])

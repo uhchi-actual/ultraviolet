@@ -11,6 +11,7 @@ import type {
   NicheSearchResponse,
   ProfileResponse,
   RadioResponse,
+  SearchResult,
   TreeGraph,
 } from "./types";
 
@@ -73,6 +74,21 @@ export async function analyzeTrack(
     throw new Error(`${res.status}: ${detail}`);
   }
   return res.json() as Promise<AnalyzeResponse>;
+}
+
+export function searchTracks(
+  query: string,
+  referenceTrackId?: string,
+  limit = 10,
+): Promise<{ query: string; reference_track_id: string | null; results: SearchResult[] }> {
+  return request("/api/search", {
+    method: "POST",
+    body: JSON.stringify({
+      query,
+      reference_track_id: referenceTrackId ?? null,
+      limit,
+    }),
+  });
 }
 
 export function cancelBatchAnalyze(): Promise<{ status: string }> {

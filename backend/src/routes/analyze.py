@@ -51,21 +51,27 @@ async def analyze(
             tmp_path = tmp.name
 
         track_id = f"track_{uuid.uuid4().hex[:12]}"
+        from src.utils.ollama_vram import unload_ollama_models
+
+        unload_ollama_models()
         vector = await analyze_track(tmp_path, track_id)
         # Waveform preview — librosa only (never torchaudio/torchcodec).
         y, _ = await asyncio.to_thread(load_audio, tmp_path, 22050)
         waveform = downsample_waveform(y)
 
         from src.recommendation.catalog import upsert_track
+        from src.scoring.clap_driver import embed_audio_file
 
         stem = Path(filename).stem
         catalog_title = title or ("" if stem.startswith(("listen-", "track_")) else stem)
+        clap_embedding = await asyncio.to_thread(embed_audio_file, tmp_path)
         upsert_track(
             track_id,
             catalog_title or "Identified track",
             artist or "",
             vector,
             source="user_upload",
+            clap_embedding=clap_embedding,
         )
     except HTTPException:
         raise

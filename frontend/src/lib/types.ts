@@ -45,6 +45,27 @@ export interface AnalyzeResponse {
   waveform_data: number[];
 }
 
+export interface UltravioletGrade {
+  score: number;
+  confidence: number;
+  agreement: string;
+  drivers: {
+    clap: number;
+    stem: number;
+    spectral: number;
+    graph: number;
+  };
+}
+
+export interface SearchResult {
+  track_id: string;
+  title: string;
+  artist: string;
+  genre_top?: string;
+  source?: string;
+  ultraviolet_grade?: UltravioletGrade;
+}
+
 export interface BatchAnalyzeEvent {
   status: string;
   total_files?: number;

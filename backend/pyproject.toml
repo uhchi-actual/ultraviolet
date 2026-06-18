@@ -42,12 +42,14 @@ audio = [
     "soundfile>=0.12",
     "imageio-ffmpeg>=0.5",
     "mutagen>=1.47",
+    "pandas>=2.2",
 ]
 # Demucs stem separation (DJ rebuild). torch/torchaudio: use cu128 on RTX 50-series (sm_120).
 demucs = [
     "demucs>=4.0.0",
     "torch>=2.7.0",
     "torchaudio>=2.7.0",
+    "transformers>=4.40.0",
 ]
 dev = [
     "pytest>=8.0",

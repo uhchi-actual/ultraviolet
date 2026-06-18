@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     demucs_model: str = "htdemucs"  # or htdemucs_ft for higher quality (4× slower)
     demucs_device: str = "cuda"
 
+    # ── FMA discovery catalog + model cache ──
+    fma_dir: str = "D:/ultraviolet-data/fma"
+    torch_cache_dir: str = "D:/ultraviolet-data/torch"
+
     # ── NicheSearch (optional streaming — off by default) ──
     spotify_client_id: str = ""
     spotify_client_secret: str = ""

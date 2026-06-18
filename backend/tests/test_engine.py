@@ -33,8 +33,12 @@ def test_to_feature_vector_length():
 
 
 def test_generate_radio_from_catalog(tmp_path, monkeypatch):
-    catalog_file = tmp_path / "tracks.json"
+    import numpy as np
+
     session_file = tmp_path / "last_radio.json"
+    emb = np.ones(512, dtype=np.float32)
+    emb = emb / np.linalg.norm(emb)
+    vec = emb.tolist()
     tracks = [
         {
             "track_id": "seed_1",
@@ -42,6 +46,8 @@ def test_generate_radio_from_catalog(tmp_path, monkeypatch):
             "artist": "Artist",
             "popularity_score": 100,
             "play_count": 10,
+            "clap_embedding": vec,
+            "genres": [10],
             "identifiers": _vector(tempo=72, harmonic_darkness=0.8).model_dump(),
         },
         {
@@ -50,6 +56,8 @@ def test_generate_radio_from_catalog(tmp_path, monkeypatch):
             "artist": "Match Artist",
             "popularity_score": 50,
             "play_count": 5,
+            "clap_embedding": vec,
+            "genres": [10],
             "identifiers": _vector(tempo=74, harmonic_darkness=0.78).model_dump(),
         },
         {
@@ -58,18 +66,22 @@ def test_generate_radio_from_catalog(tmp_path, monkeypatch):
             "artist": "Far Artist",
             "popularity_score": 5000,
             "play_count": 0,
+            "clap_embedding": vec,
+            "genres": [99],
             "identifiers": _vector(tempo=180, energy=0.95, harmonic_darkness=0.1).model_dump(),
         },
     ]
+    catalog_file = tmp_path / "tracks.json"
     catalog_file.write_text(json.dumps(tracks), encoding="utf-8")
 
     monkeypatch.setattr("src.recommendation.catalog._catalog_path", lambda: catalog_file)
     monkeypatch.setattr("src.recommendation.session._session_path", lambda: session_file)
+    monkeypatch.setattr("src.recommendation.engine.recommendation_pool", lambda: tracks)
 
     result = generate_radio("seed_1", count=5, obscurity_dial=0.7)
     assert result["seed"]["track_id"] == "seed_1"
     assert len(result["recommendations"]) >= 1
-    assert all(r["confidence"] >= 0.6 for r in result["recommendations"])
+    assert all(r["confidence"] >= 0.35 for r in result["recommendations"])
     assert result["recommendations"][0]["tree_chain"]
 
 

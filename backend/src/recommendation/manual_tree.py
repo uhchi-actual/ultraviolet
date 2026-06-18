@@ -11,11 +11,12 @@ import random
 import secrets
 from typing import Any
 
-from src.recommendation.catalog import library_tracks, purge_junk_tracks
+from src.catalog.fma import get_fma_track, list_fma_tracks, recommendation_pool, search_fma
+from src.recommendation.catalog import library_tracks, purge_demo_tracks, purge_junk_tracks
 from src.recommendation.catalog_filters import recommendable_tracks, track_dedupe_key
 from src.recommendation.catalog_lookup import resolve_seed_from_catalog
 from src.recommendation.session import save_radio_session
-from src.recommendation.similarity_engine import recommend_branches
+from src.scoring.engine import recommend_branches
 from src.recommendation.tree_builder import build_tree_chain
 from src.recommendation.tree_depth import graph_node_id, tree_depth_config
 
@@ -33,6 +34,7 @@ def _append_rec(
     genre_bucket: str | None,
     library: list[dict[str, Any]],
     seen_keys: set[str],
+    ultraviolet_grade: dict | None = None,
 ) -> bool:
     key = track_dedupe_key(track)
     if key in seen_keys:
@@ -52,6 +54,7 @@ def _append_rec(
             "seed_track_id": seed["track_id"],
             "parent_id": parent_id,
             "depth": depth,
+            "ultraviolet_grade": ultraviolet_grade,
             "tree_chain": build_tree_chain(
                 {"identifiers": track["identifiers"], "title": track["title"]},
                 seed["identifiers"],
@@ -91,11 +94,14 @@ def build_manual_tree(
         l1_count = max(recs_per_seed, l1_count)
 
     purge_junk_tracks()
-    catalog = recommendable_tracks()
+    purge_demo_tracks()
+    catalog = recommendation_pool()
+    if len(catalog) < 2:
+        catalog = list_fma_tracks()
     if len(catalog) < 2:
         raise ValueError(
-            "Catalog too small for branching. Analyze more tracks on the Analyze page "
-            "or use demo catalog tracks as seeds."
+            "FMA catalog not ready. Run: python scripts/build_fma_catalog.py "
+            "after downloading fma_small.zip to D:/ultraviolet-data/fma/"
         )
 
     build_seed = secrets.randbelow(2**31)
@@ -135,6 +141,7 @@ def build_manual_tree(
                 genre_bucket=item.get("genre_bucket"),
                 library=library,
                 seen_keys=seen_keys,
+                ultraviolet_grade=item.get("ultraviolet_grade"),
             ):
                 continue
             exclude_keys.add(track_dedupe_key(track))
@@ -162,6 +169,7 @@ def build_manual_tree(
                     genre_bucket=child.get("genre_bucket"),
                     library=library,
                     seen_keys=seen_keys,
+                    ultraviolet_grade=child.get("ultraviolet_grade"),
                 ):
                     continue
                 exclude_keys.add(track_dedupe_key(ct))
@@ -190,6 +198,7 @@ def build_manual_tree(
                         genre_bucket=grand.get("genre_bucket"),
                         library=library,
                         seen_keys=seen_keys,
+                        ultraviolet_grade=grand.get("ultraviolet_grade"),
                     ):
                         exclude_keys.add(track_dedupe_key(gt))
                         exclude_track_ids.add(gt["track_id"])

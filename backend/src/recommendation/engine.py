@@ -5,20 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from src.catalog.fma import recommendation_pool
 from src.recommendation.bridge import find_bridges
 from src.recommendation.catalog import get_track, library_tracks
-from src.recommendation.catalog_filters import recommendable_tracks, track_dedupe_key
+from src.recommendation.catalog_filters import track_dedupe_key
 from src.recommendation.genre_buckets import pick_genre_diverse
-from src.recommendation.scoring import (
-    DISCOVERY_QUOTA,
-    MIN_SIMILARITY,
-    apply_obscurity_bonus,
-    is_obscure,
-    similarity_between_tracks,
-)
+from src.recommendation.scoring import DISCOVERY_QUOTA, MIN_SIMILARITY, is_obscure
 from src.recommendation.session import save_radio_session
 from src.recommendation.tree_builder import build_tree_chain, build_tree_graph
-from src.recommendation.vectorize import to_feature_vector, user_weights_from_taste
+from src.scoring.engine import score_catalog
 
 logger = logging.getLogger("ultraviolet.engine")
 
@@ -34,30 +29,18 @@ def generate_radio(
     if seed is None:
         raise KeyError(f"Unknown seed track: {seed_track_id}")
 
-    catalog = recommendable_tracks(exclude_id=seed_track_id)
-    weights = user_weights_from_taste(user_weights)
-    seed_ids = seed["identifiers"]
-    max_plays = max((int(t.get("popularity_score", 0)) for t in catalog), default=1)
-
-    scored: list[dict[str, Any]] = []
-    for track in catalog:
-        if track["track_id"] == seed_track_id:
-            continue
-        sim = similarity_between_tracks(seed_ids, track["identifiers"], weights)
-        if sim < MIN_SIMILARITY:
-            continue
-        popularity = int(track.get("popularity_score", 0))
-        final = apply_obscurity_bonus(sim, popularity, max_plays, obscurity_dial)
-        scored.append(
-            {
-                "track": track,
-                "similarity": sim,
-                "final_score": final,
-                "recommendation_type": "direct",
-            }
-        )
-
-    scored.sort(key=lambda item: item["final_score"], reverse=True)
+    catalog = recommendation_pool()
+    scored_raw = score_catalog(
+        seed,
+        catalog,
+        exclude_ids={seed_track_id},
+        exclude_keys=set(),
+        obscurity_dial=obscurity_dial,
+        depth=1,
+    )
+    scored: list[dict[str, Any]] = [
+        {**item, "recommendation_type": "direct"} for item in scored_raw
+    ]
     picked = pick_genre_diverse(scored, count)
     # Still apply discovery quota within genre-diverse picks
     picked = _apply_discovery_quota(picked, count)
@@ -73,10 +56,11 @@ def generate_radio(
                 "track_id": item["track"]["track_id"],
                 "title": item["track"]["title"],
                 "artist": item["track"]["artist"],
-                "identifiers": item["track"]["identifiers"],
+                "identifiers": item["track"].get("identifiers", {}),
                 "similarity": item["similarity"],
                 "recommendation_type": item["recommendation_type"],
                 "genre_bucket": item.get("genre_bucket"),
+                "ultraviolet_grade": item.get("ultraviolet_grade"),
             }
         )
         if len(direct_flat) >= count:

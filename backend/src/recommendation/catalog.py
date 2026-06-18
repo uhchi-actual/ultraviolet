@@ -24,11 +24,7 @@ def _ensure_catalog() -> Path:
     path = _catalog_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
-        if _DEMO_SOURCE.exists():
-            shutil.copy(_DEMO_SOURCE, path)
-            logger.info("Seeded track catalog from demo data: %s", path)
-        else:
-            path.write_text("[]", encoding="utf-8")
+        path.write_text("[]", encoding="utf-8")
     return path
 
 
@@ -55,6 +51,8 @@ def upsert_track(
     play_count: int = 0,
     source: str = "user_upload",
     spotify_id: str | None = None,
+    clap_embedding: list[float] | None = None,
+    audio_path: str | None = None,
 ) -> dict[str, Any]:
     path = _ensure_catalog()
     tracks = list_tracks()
@@ -70,6 +68,10 @@ def upsert_track(
     }
     if spotify_id:
         record["spotify_id"] = spotify_id
+    if clap_embedding:
+        record["clap_embedding"] = clap_embedding
+    if audio_path:
+        record["audio_path"] = audio_path
     replaced = False
     for i, track in enumerate(tracks):
         if track.get("track_id") == track_id:
