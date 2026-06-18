@@ -12,8 +12,21 @@ if ($LASTEXITCODE -ne 0) {
   exit 1
 }
 
+$repoExists = $false
+gh repo view $repo 2>$null
+if ($LASTEXITCODE -eq 0) { $repoExists = $true }
+
+if (-not $repoExists) {
+  Write-Host "Creating $repo on GitHub..."
+  if (git remote get-url origin 2>$null) {
+    gh repo create $repo --public --description "Multi-agent music recommendation engine with explainable Tree"
+  } else {
+    gh repo create $repo --public --source=. --remote=origin --description "Multi-agent music recommendation engine with explainable Tree"
+  }
+}
+
 if (-not (git remote get-url origin 2>$null)) {
-  gh repo create $repo --public --source=. --remote=origin --description "Multi-agent music recommendation engine with explainable Tree"
+  git remote add origin "https://github.com/$repo.git"
 }
 
 git branch -M main

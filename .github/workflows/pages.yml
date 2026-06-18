@@ -26,18 +26,19 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Export static catalog
+      - name: Prepare static catalog
         run: |
-          if [ -f backend/data/static/fma_clap.npz ]; then
+          if [ -f frontend/public/data/manifest.json ]; then
+            echo "Using committed frontend/public/data"
+          elif [ -f backend/data/static/fma_clap.npz ]; then
             mkdir -p /tmp/uv-catalog
             cp backend/data/static/fma_clap.npz /tmp/uv-catalog/
             cp backend/data/static/fma_index.json /tmp/uv-catalog/
             export CATALOG_DIR=/tmp/uv-catalog
-            pip install numpy
+            pip install numpy pydantic pydantic-settings
             python scripts/export_static_catalog.py
           else
-            echo "Using committed frontend/public/data (LFS or checked-in)"
-            test -f frontend/public/data/manifest.json
+            echo "No catalog data found" && exit 1
           fi
 
       - uses: actions/setup-node@v4
