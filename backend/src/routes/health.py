@@ -57,4 +57,8 @@ async def health() -> dict[str, object]:
         "ollama_model": ollama_model,
     }
     healthy = services["fastapi"] == "up"
-    return {"status": "healthy" if healthy else "degraded", "services": services}
+    return {
+        "status": "healthy" if healthy else "degraded",
+        "build": "clap-text-seeds-v2",
+        "services": services,
+    }

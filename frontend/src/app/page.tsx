@@ -40,23 +40,24 @@ export default function HomePage() {
         </h1>
 
         <p className="max-w-2xl text-lg text-uv-text-secondary">
-          A locally-deployed, content-based recommendation engine. It listens to the
-          audio itself — so a track with 12 plays gets the same treatment as one with
-          50 million streams — and shows you <em>why</em> every recommendation was made.
+          A content-based recommendation engine that listens to the audio itself — so a
+          track with 12 plays gets the same treatment as one with 50 million streams —
+          and shows you <em>why</em> every recommendation was made. This demo runs fully
+          in your browser from GitHub Pages.
         </p>
 
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/analyze"
+            href="/tree"
             className="uv-gradient-bg rounded-lg px-5 py-2.5 font-medium text-white shadow-[0_0_1.5rem_var(--uv-glow)] transition-opacity hover:opacity-90"
           >
-            Analyze a track
+            Build a Tree
           </Link>
           <Link
-            href="/radio"
+            href="/analyze"
             className="rounded-lg border border-uv-border-strong px-5 py-2.5 font-medium text-uv-text-primary transition-colors hover:border-uv-purple-bright hover:bg-uv-bg-elevated"
           >
-            Open Radio
+            Search catalog
           </Link>
         </div>
       </section>
@@ -119,10 +120,9 @@ export default function HomePage() {
           Project status
         </p>
         <p className="mt-2 text-uv-text-secondary">
-          <span className="text-uv-text-primary">Phase 1 — Foundation.</span> The
-          full stack scaffolding is in place: Docker Compose, the FastAPI backend with
-          a live chat endpoint, and this themed Next.js frontend. Audio analysis,
-          profiling, recommendations, and the Tree arrive in later phases.
+          <span className="text-uv-text-primary">Public demo.</span> Tree and catalog
+          search run client-side over 8,000 FMA tracks — no backend, no upload. Chat,
+          Radio, and Profile require the full local stack.
         </p>
       </section>
     </div>

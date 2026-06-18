@@ -54,6 +54,20 @@ ultraviolet/
 
 ---
 
+## Live demo (GitHub Pages)
+
+**https://uhchi-actual.github.io/ultraviolet/**
+
+Static client-side demo — no install, no backend. Tree and catalog search run in the browser over 7,994 FMA tracks.
+
+| Page | Static demo |
+|------|-------------|
+| Tree | Full — type `Artist - Title`, build constellation |
+| Analyze | Catalog search only (upload needs local stack) |
+| Chat / Radio / Profile | Local stack only |
+
+---
+
 ## Quick start
 
 ### Option A — Docker (full stack)
@@ -99,20 +113,21 @@ npm run dev
 
 ---
 
-## Phase 1 status (current)
+## Status (2026-06)
 
-This repository is at **Phase 1: Foundation**. What works today:
+**Public demo:** static GitHub Pages build (`frontend/` → `out/`). See [`HANDOFF.md`](HANDOFF.md) for resume notes.
 
-- [x] Full repository structure
-- [x] Docker Compose for all 5 services
-- [x] FastAPI skeleton with CORS, config, lifespan, `/api/health`
-- [x] `POST /api/chat` wired through the Conductor → Ollama (graceful fallback if offline)
-- [x] Stubbed routes for radio / analyze / tree / profile / ingest
-- [x] Next.js 15 + Tailwind v4 with the full Ultraviolet + uhchi theme
-- [x] Base layout, Navbar, and all page routes stubbed
+**Local full stack:** FastAPI + CLAP/Demucs analysis, FMA 8K catalog on `D:\ultraviolet-data\`, multi-driver scoring, manual tree API.
 
-Later phases implement the DJ analysis pipeline, SOUL RAG profiler, the
-recommendation engine, and the interactive Tree. See the roadmap in the PRD.
+- [x] Static Tree + FMA search in-browser (GitHub Pages)
+- [x] FMA 8K catalog + CLAP embeddings pipeline
+- [x] Multi-driver scoring (CLAP + spectral + graph + MMR)
+- [x] DJ analysis pipeline (Demucs stems, 15 identifiers)
+- [ ] SOUL profile RAG (Chroma + ingest)
+- [ ] Conductor chat with live recommendations
+- [ ] Radio playback
+
+Earlier Phase 1 scaffolding (Docker, theme, routes) remains; see git history.
 
 ---
 

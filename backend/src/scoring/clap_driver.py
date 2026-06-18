@@ -65,11 +65,11 @@ def embed_audio(audio_array: np.ndarray, sr: int = CLAP_SAMPLE_RATE) -> list[flo
 
         audio_array = librosa.resample(audio_array.astype(np.float32), orig_sr=sr, target_sr=CLAP_SAMPLE_RATE)
 
-    inputs = processor(audios=audio_array, sampling_rate=CLAP_SAMPLE_RATE, return_tensors="pt")
+    inputs = processor(audio=[audio_array], sampling_rate=CLAP_SAMPLE_RATE, return_tensors="pt")
     inputs = {k: v.to(device) for k, v in inputs.items()}
     with torch.no_grad():
-        features = model.get_audio_features(**inputs)
-    vec = features[0].detach().cpu().numpy().astype(np.float32)
+        output = model.get_audio_features(**inputs)
+    vec = output.pooler_output[0].detach().cpu().numpy().astype(np.float32)
     norm = float(np.linalg.norm(vec))
     if norm > 1e-9:
         vec = vec / norm
@@ -91,8 +91,8 @@ def embed_text(description: str) -> list[float]:
     inputs = processor(text=[description], return_tensors="pt", padding=True)
     inputs = {k: v.to(device) for k, v in inputs.items()}
     with torch.no_grad():
-        features = model.get_text_features(**inputs)
-    vec = features[0].detach().cpu().numpy().astype(np.float32)
+        output = model.get_text_features(**inputs)
+    vec = output.pooler_output[0].detach().cpu().numpy().astype(np.float32)
     norm = float(np.linalg.norm(vec))
     if norm > 1e-9:
         vec = vec / norm

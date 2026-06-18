@@ -1,0 +1,70 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Export static catalog
+        run: |
+          if [ -f backend/data/static/fma_clap.npz ]; then
+            mkdir -p /tmp/uv-catalog
+            cp backend/data/static/fma_clap.npz /tmp/uv-catalog/
+            cp backend/data/static/fma_index.json /tmp/uv-catalog/
+            export CATALOG_DIR=/tmp/uv-catalog
+            pip install numpy
+            python scripts/export_static_catalog.py
+          else
+            echo "Using committed frontend/public/data (LFS or checked-in)"
+            test -f frontend/public/data/manifest.json
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build static site
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_STATIC_MODE: "true"
+          NEXT_PUBLIC_BASE_PATH: /ultraviolet
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

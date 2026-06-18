@@ -18,7 +18,7 @@ export function TreePanel() {
       <PageHeader
         eyebrow="Explainable traceback"
         title="Tree"
-        description="Branches use in-house Demucs/librosa fingerprints — perceptual similarity + MMR diversity. Each build is a new constellation."
+        description="Type any artist and title — branches from 8,000 FMA tracks via multi-driver CLAP scoring. No upload required."
       />
 
       <div className="mb-5">

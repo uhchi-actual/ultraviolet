@@ -61,9 +61,8 @@ export function ManualTreeBuilder({
       </h3>
       <p className="mt-2 text-sm text-uv-text-secondary">
         Type up to <strong className="text-uv-text-primary">50 songs</strong> — one per line. Format:{" "}
-        <code className="text-uv-text-primary">Artist - Title</code>. Seeds must already be in your catalog
-        (upload + Analyze, or demo tracks like Ceremony, Plainsong). Branches use our in-house Demucs/librosa
-        fingerprints — not Spotify.
+        <code className="text-uv-text-primary">Artist - Title</code>. Any song works — we match FMA when
+        possible, otherwise CLAP text embeddings. No upload or account needed.
       </p>
       <textarea
         value={text}

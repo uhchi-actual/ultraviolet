@@ -45,6 +45,31 @@ export interface AnalyzeResponse {
   waveform_data: number[];
 }
 
+export interface FmaPipelineStatus {
+  phase: string;
+  running: boolean;
+  complete: boolean;
+  message: string;
+  zip_path?: string;
+  server_now?: number;
+  _started_at?: number;
+  download: {
+    bytes: number;
+    total_bytes: number;
+    percent: number;
+    speed_bps: number;
+    speed_mbps: number;
+    elapsed_sec: number;
+    eta_sec: number | null;
+    bytes_human: string;
+    total_human: string;
+    elapsed_human: string;
+    eta_human: string;
+  };
+  extract: { done: boolean };
+  embed: { done: number; total: number; percent: number; current_title?: string };
+}
+
 export interface UltravioletGrade {
   score: number;
   confidence: number;

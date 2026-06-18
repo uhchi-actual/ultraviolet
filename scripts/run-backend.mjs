@@ -27,7 +27,12 @@ const env = {
   SESSION_DIR: "D:\\ultraviolet-data\\sessions",
 };
 
-const child = spawn(venvUvicorn, ["src.main:app", "--host", "127.0.0.1", "--port", "8000"], {
+const port = process.env.UV_BACKEND_PORT ?? "8001";
+
+const child = spawn(
+  venvUvicorn,
+  ["src.main:app", "--host", "127.0.0.1", "--port", port, "--reload"],
+  {
   cwd: backend,
   env,
   stdio: "inherit",

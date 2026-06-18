@@ -12,6 +12,7 @@ import type {
   ProfileResponse,
   RadioResponse,
   SearchResult,
+  FmaPipelineStatus,
   TreeGraph,
 } from "./types";
 
@@ -76,19 +77,31 @@ export async function analyzeTrack(
   return res.json() as Promise<AnalyzeResponse>;
 }
 
+export function getFmaStatus(): Promise<FmaPipelineStatus> {
+  return request<FmaPipelineStatus>("/api/fma/status");
+}
+
+export function startFmaPipeline(): Promise<{ started: boolean; message: string }> {
+  return request("/api/fma/start", { method: "POST" });
+}
+
 export function searchTracks(
   query: string,
   referenceTrackId?: string,
   limit = 10,
 ): Promise<{ query: string; reference_track_id: string | null; results: SearchResult[] }> {
-  return request("/api/search", {
-    method: "POST",
-    body: JSON.stringify({
-      query,
-      reference_track_id: referenceTrackId ?? null,
-      limit,
-    }),
-  });
+  return import("./static/catalog")
+    .then((c) => c.loadCatalog().then(() => import("./static/seeds")))
+    .then((s) => {
+      const hits = s.searchFma(query, limit).map((t) => ({
+        track_id: t.track_id,
+        title: t.title,
+        artist: t.artist,
+        genre_top: t.genre_top,
+        source: "fma",
+      }));
+      return { query, reference_track_id: referenceTrackId ?? null, results: hits };
+    });
 }
 
 export function cancelBatchAnalyze(): Promise<{ status: string }> {
@@ -229,8 +242,7 @@ export function buildManualTree(body: {
   recs_per_seed?: number;
   obscurity_dial?: number;
 }): Promise<{ tree: TreeGraph }> {
-  return request("/api/tree/build", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+  return import("./static/tree").then((m) =>
+    m.buildManualTreeStatic(body).then((r) => ({ tree: r.tree })),
+  );
 }

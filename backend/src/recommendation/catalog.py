@@ -138,7 +138,7 @@ def _norm_artist(artist: str) -> str:
 
 def is_fake_demo_track(track: dict[str, Any]) -> bool:
     tid = track.get("track_id", "")
-    if tid in _FAKE_DEMO_TRACK_IDS:
+    if tid.startswith("demo_") or tid in _FAKE_DEMO_TRACK_IDS:
         return True
     return _norm_artist(track.get("artist", "")) in _FAKE_DEMO_ARTISTS
 

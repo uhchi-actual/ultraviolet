@@ -77,8 +77,9 @@ export function AnalyzePanel() {
       <section className="rounded-xl border border-uv-border bg-uv-bg-surface/70 p-5">
         <h2 className="text-lg font-semibold text-uv-text-primary">Search FMA Catalog</h2>
         <p className="mt-2 text-sm text-uv-text-secondary">
-          Type <code className="text-uv-text-primary">Artist - Title</code> to search 8,000 real
-          tracks from the Free Music Archive. Multi-driver scores appear when you have a seed track.
+          Static demo — search runs in your browser against 7,994 baked-in tracks. Upload/Demucs
+          needs a server; use <Link href="/tree" className="text-uhchi-secondary underline">Tree</Link> for
+          the full demo.
         </p>
         <form onSubmit={handleSearch} className="mt-4 flex gap-2">
           <input
@@ -119,7 +120,10 @@ export function AnalyzePanel() {
         </ul>
       ) : null}
 
-      <UploadZone onFile={handleFile} disabled={loading} />
+      <p className="text-sm text-uv-text-muted">
+        Upload disabled in static build — Tree page works fully in-browser.
+      </p>
+      <UploadZone onFile={handleFile} disabled />
 
       {loading ? (
         <div className="flex items-center gap-3 rounded-xl border border-uv-border bg-uv-bg-surface/70 p-5 text-sm text-uv-text-secondary">

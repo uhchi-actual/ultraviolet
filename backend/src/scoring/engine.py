@@ -10,7 +10,9 @@ from src.recommendation.scoring import MIN_SIMILARITY, apply_obscurity_bonus
 from src.scoring.ultraviolet_score import UserProfile, ultraviolet_score
 
 
-def _effective_min_score(catalog_size: int, depth: int) -> float:
+def _effective_min_score(catalog_size: int, depth: int, parent: dict[str, Any] | None = None) -> float:
+    if parent and parent.get("source") == "clap_text":
+        return 0.03
     floor = MIN_SIMILARITY * 0.65
     if catalog_size > 1000:
         floor = 0.45
@@ -33,7 +35,11 @@ def score_catalog(
 
     parent_id = parent.get("track_id", "")
     profile = user_profile or UserProfile()
-    min_score = _effective_min_score(len(catalog), depth)
+    if parent.get("source") == "clap_text" and user_profile is None:
+        profile = UserProfile(
+            driver_weights={"clap": 0.90, "stem": 0.0, "spectral": 0.05, "graph": 0.05},
+        )
+    min_score = _effective_min_score(len(catalog), depth, parent)
     max_plays = max((int(t.get("popularity_score", 0)) for t in catalog), default=1)
     scored: list[dict[str, Any]] = []
 
@@ -45,8 +51,21 @@ def score_catalog(
         if key in exclude_keys:
             continue
 
-        grade = ultraviolet_score(parent, track, profile)
-        sim = grade["score"]
+        if parent.get("source") == "clap_text":
+            from src.scoring.clap_driver import clap_similarity
+
+            emb_a = parent.get("clap_embedding") or []
+            emb_b = track.get("clap_embedding") or []
+            sim = clap_similarity(emb_a, emb_b)
+            grade = {
+                "score": sim,
+                "confidence": 0.5,
+                "agreement": "clap_text",
+                "drivers": {"clap": sim, "stem": 0.0, "spectral": 0.0, "graph": 0.0},
+            }
+        else:
+            grade = ultraviolet_score(parent, track, profile)
+            sim = grade["score"]
         if sim < min_score:
             continue
         popularity = int(track.get("popularity_score", 0))
@@ -137,7 +156,7 @@ def recommend_branches(
         obscurity_dial=obscurity_dial,
         depth=depth,
         user_profile=user_profile,
-        run_stem_for_top=run_stem_for_top if depth == 1 else 0,
+        run_stem_for_top=run_stem_for_top if depth == 1 and parent.get("source") != "clap_text" else 0,
     )
     if not scored:
         return []

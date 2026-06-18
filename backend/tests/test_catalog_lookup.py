@@ -1,13 +1,16 @@
 """Tests for catalog seed lookup."""
 
+import pytest
+
 from src.recommendation.catalog_lookup import resolve_seed_from_catalog
 
 
-def test_resolve_fuzzy_title(monkeypatch):
+def test_resolve_fuzzy_title_local(monkeypatch):
     catalog_track = {
-        "track_id": "demo_ceremony",
+        "track_id": "local_ceremony",
         "title": "Ceremony",
         "artist": "New Order",
+        "clap_embedding": [0.1] * 512,
         "identifiers": {
             "tempo": 120.0,
             "key": 0,
@@ -23,20 +26,44 @@ def test_resolve_fuzzy_title(monkeypatch):
             "emotional_arc": {"values": [], "label": ""},
         },
     }
+    monkeypatch.setattr("src.recommendation.catalog_lookup._resolve_fma_seed", lambda t, a: None)
     monkeypatch.setattr(
         "src.recommendation.catalog_lookup.list_tracks",
         lambda: [catalog_track],
     )
     hit = resolve_seed_from_catalog("Ceremony", "New Order")
-    assert hit["track_id"] == "demo_ceremony"
+    assert hit["track_id"] == "local_ceremony"
 
 
-def test_resolve_missing_raises(monkeypatch):
+def test_resolve_text_fallback_when_not_in_fma(monkeypatch):
+    monkeypatch.setattr("src.recommendation.catalog_lookup._resolve_fma_seed", lambda t, a: None)
     monkeypatch.setattr("src.recommendation.catalog_lookup.list_tracks", lambda: [])
-    try:
-        resolve_seed_from_catalog("Not A Real Song", "Nobody")
-        raised = False
-    except ValueError as exc:
-        raised = True
-        assert "Analyze page" in str(exc)
-    assert raised
+    monkeypatch.setattr(
+        "src.recommendation.catalog_lookup.embed_text",
+        lambda desc: [0.1] * 512,
+        raising=False,
+    )
+    from src.scoring import clap_driver
+
+    monkeypatch.setattr(clap_driver, "embed_text", lambda desc: [0.1] * 512)
+
+    hit = resolve_seed_from_catalog("Ceremony", "New Order")
+    assert hit["source"] == "clap_text"
+    assert hit["title"] == "Ceremony"
+    assert len(hit["clap_embedding"]) == 512
+
+
+def test_resolve_fma_preferred(monkeypatch):
+    fma_track = {
+        "track_id": "fma_123",
+        "title": "Freeway",
+        "artist": "Kurt Vile",
+        "clap_embedding": [0.2] * 512,
+        "identifiers": {},
+    }
+    monkeypatch.setattr(
+        "src.recommendation.catalog_lookup._resolve_fma_seed",
+        lambda t, a: fma_track,
+    )
+    hit = resolve_seed_from_catalog("Freeway", "Kurt Vile")
+    assert hit["track_id"] == "fma_123"

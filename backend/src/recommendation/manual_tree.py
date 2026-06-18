@@ -1,7 +1,6 @@
 """Build a branching Tree from manually entered songs (up to 50).
 
-Recommendations use the in-house similarity engine (IdentifierVector fingerprints).
-Seeds must exist in the local catalog (upload + analyze, or demo tracks).
+Seeds resolve from the FMA catalog or CLAP text — no upload required.
 """
 
 from __future__ import annotations
@@ -205,8 +204,8 @@ def build_manual_tree(
 
     if not all_recs:
         raise ValueError(
-            "No branches matched your seeds. Analyze more tracks with similar sonic "
-            "profiles, or lower obscurity — matching uses in-house Demucs/librosa vectors."
+            "No branches matched your seeds. Try a different artist/title, lower obscurity, "
+            "or wait for the FMA catalog to finish embedding."
         )
 
     primary = resolved[0]

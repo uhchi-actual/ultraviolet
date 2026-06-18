@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
+import { AppShell } from "@/components/AppShell";
 import { Navbar } from "@/components/nav/Navbar";
 import "./globals.css";
 
@@ -38,7 +39,7 @@ export default function RootLayout({
     >
       <body>
         <Navbar />
-        <main className="mx-auto max-w-6xl px-4 py-10 sm:py-14">{children}</main>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

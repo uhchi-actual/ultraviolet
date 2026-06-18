@@ -16,7 +16,7 @@ from src.config import settings
 
 logger = logging.getLogger("ultraviolet.fma")
 
-FMA_SMALL_MAX_ID = 7999
+FMA_SMALL_MAX_ID = 7999  # legacy name; fma_small.zip uses scattered ids across full FMA
 
 
 def _fma_root() -> Path:
@@ -89,29 +89,39 @@ def _echonest_features(track_id: int, echonest: Any | None) -> dict[str, Any]:
 
 
 def build_fma_index_from_metadata() -> list[dict[str, Any]]:
-    """Build FMA small catalog entries from tracks.csv (+ optional echonest features)."""
+    """Build FMA small catalog: every on-disk mp3, merged with tracks.csv when available."""
     import pandas as pd
 
     tracks_path = _metadata_dir() / "tracks.csv"
-    if not tracks_path.exists():
-        raise FileNotFoundError(f"FMA tracks.csv not found under {settings.fma_dir}")
-
-    tracks = pd.read_csv(tracks_path, index_col=0, header=[0, 1])
-    small = tracks[tracks.index.astype(int) <= FMA_SMALL_MAX_ID]
+    meta_by_id: dict[int, Any] = {}
+    if tracks_path.exists():
+        tracks = pd.read_csv(tracks_path, index_col=0, header=[0, 1])
+        for tid, row in tracks.iterrows():
+            meta_by_id[int(tid)] = row
 
     echonest_path = _metadata_dir() / "echonest.csv"
     echonest = None
     if echonest_path.exists():
         echonest = pd.read_csv(echonest_path, index_col=0, header=[0, 1], low_memory=False)
 
+    audio_root = _fma_root() / "fma_small"
+    if not audio_root.exists():
+        raise FileNotFoundError(f"FMA audio not found under {audio_root}")
+
     records: list[dict[str, Any]] = []
-    for tid, row in small.iterrows():
-        track_id = int(tid)
-        genres = _parse_genres(row[("track", "genres")])
-        genre_top = str(row[("track", "genre_top")] or "")
-        title = str(row[("track", "title")] or "")
-        artist = str(row[("artist", "name")] or "")
-        audio = _audio_path(track_id)
+    for mp3 in sorted(audio_root.rglob("*.mp3")):
+        track_id = int(mp3.stem)
+        row = meta_by_id.get(track_id)
+        if row is not None:
+            genres = _parse_genres(row[("track", "genres")])
+            genre_top = str(row[("track", "genre_top")] or "")
+            title = str(row[("track", "title")] or "")
+            artist = str(row[("artist", "name")] or "")
+        else:
+            genres = []
+            genre_top = ""
+            title = f"Track {track_id}"
+            artist = "Unknown"
         identifiers = _echonest_features(track_id, echonest)
         records.append(
             {
@@ -123,7 +133,7 @@ def build_fma_index_from_metadata() -> list[dict[str, Any]]:
                 "genre_top": genre_top,
                 "genre_bucket": genre_top or "unknown",
                 "source": "fma",
-                "audio_path": str(audio) if audio.exists() else "",
+                "audio_path": str(mp3),
                 "identifiers": identifiers,
             }
         )
@@ -148,12 +158,20 @@ def save_clap_embeddings(track_ids: list[str], embeddings: np.ndarray) -> None:
 @lru_cache(maxsize=1)
 def _load_clap_npz() -> dict[str, np.ndarray]:
     path = _embeddings_path()
-    if not path.exists():
-        return {}
-    data = np.load(path, allow_pickle=True)
-    ids = [str(x) for x in data["track_ids"].tolist()]
-    emb = data["embeddings"]
-    return dict(zip(ids, emb, strict=True))
+    if path.exists() and path.stat().st_size > 10_000:
+        data = np.load(path, allow_pickle=True)
+        ids = [str(x) for x in data["track_ids"].tolist()]
+        emb = data["embeddings"]
+        return dict(zip(ids, emb, strict=True))
+
+    checkpoint = Path(settings.catalog_dir) / "fma_embed_checkpoint.json"
+    if checkpoint.exists() and checkpoint.stat().st_size > 10:
+        try:
+            raw = json.loads(checkpoint.read_text(encoding="utf-8"))
+            return {k: np.asarray(v, dtype=np.float32) for k, v in raw.items() if isinstance(v, list)}
+        except (json.JSONDecodeError, OSError, ValueError):
+            pass
+    return {}
 
 
 def list_fma_tracks(*, with_embeddings_only: bool = False) -> list[dict[str, Any]]:
