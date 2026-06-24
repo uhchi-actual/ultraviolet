@@ -7,6 +7,7 @@ import {
   analyzeStreamingTracks,
   completeSpotifyLoginFromUrl,
   configuredSpotifyClientId,
+  extractSpotifyPlaylistId,
   fetchSpotifyPlaylistTracks,
   fetchSpotifyPlaylists,
   motifLegend,
@@ -59,6 +60,7 @@ export function StreamingSourcesPanel({
 }) {
   const [pasteText, setPasteText] = useState(STARTER_ROTATION);
   const [clientId, setClientId] = useState("");
+  const [spotifyPlaylistUrl, setSpotifyPlaylistUrl] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [loading, setLoading] = useState(false);
@@ -126,12 +128,12 @@ export function StreamingSourcesPanel({
     }
   }
 
-  async function loadPlaylist(id: string) {
-    if (!token) return;
+  async function loadPlaylist(id: string, accessToken = token) {
+    if (!accessToken) return;
     setLoading(true);
     setStatus(null);
     try {
-      const items = await fetchSpotifyPlaylistTracks(id, token);
+      const items = await fetchSpotifyPlaylistTracks(id, accessToken);
       const text = tracksToSeedText(items, 80);
       setPasteText(text);
       onUseSeeds(text);
@@ -141,6 +143,21 @@ export function StreamingSourcesPanel({
     } finally {
       setLoading(false);
     }
+  }
+
+  async function importSpotifyPlaylistLink() {
+    const access = spotifyAccessToken();
+    if (!access) {
+      setStatus("Connect Spotify first");
+      return;
+    }
+    const playlistId = extractSpotifyPlaylistId(spotifyPlaylistUrl);
+    if (!playlistId) {
+      setStatus("Paste a Spotify playlist link or URI");
+      return;
+    }
+    setToken(access);
+    await loadPlaylist(playlistId, access);
   }
 
   async function createYouTubePlaylist() {
@@ -250,6 +267,22 @@ export function StreamingSourcesPanel({
           >
             {loading ? "Loading..." : "Load Spotify playlists"}
           </button>
+          <div className="mt-2 flex gap-2">
+            <input
+              value={spotifyPlaylistUrl}
+              onChange={(e) => setSpotifyPlaylistUrl(e.target.value)}
+              placeholder="Spotify playlist link"
+              className="min-w-0 flex-1 rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
+            />
+            <button
+              type="button"
+              onClick={importSpotifyPlaylistLink}
+              disabled={loading}
+              className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright disabled:opacity-50"
+            >
+              Import
+            </button>
+          </div>
           {status ? <p className="mt-2 text-xs text-uv-text-secondary">{status}</p> : null}
           {playlists.length ? (
             <div className="mt-3 max-h-44 space-y-2 overflow-auto pr-1">

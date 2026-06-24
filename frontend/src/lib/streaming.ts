@@ -302,6 +302,25 @@ export function tracksToSeedText(tracks: StreamingTrack[], limit = 50): string {
     .join("\n");
 }
 
+export function extractSpotifyPlaylistId(value: string): string | null {
+  const input = clean(value);
+  if (!input) return null;
+
+  const uriMatch = input.match(/^spotify:playlist:([A-Za-z0-9]+)$/);
+  if (uriMatch?.[1]) return uriMatch[1];
+
+  try {
+    const url = new URL(input);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const playlistIndex = parts.indexOf("playlist");
+    if (playlistIndex >= 0 && parts[playlistIndex + 1]) return parts[playlistIndex + 1]!;
+  } catch {
+    /* Not a URL; fall through to raw id parsing. */
+  }
+
+  return /^[A-Za-z0-9]{16,}$/.test(input) ? input : null;
+}
+
 export function providerSearchUrl(track: StreamingTrack, provider: "spotify" | "youtube" | "soundcloud"): string {
   const query = encodeURIComponent(`${track.artist} ${track.title}`);
   if (provider === "spotify") return `https://open.spotify.com/search/${query}`;
