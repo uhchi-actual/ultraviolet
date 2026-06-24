@@ -1,8 +1,21 @@
-import { DISCOVERY_CATALOG, inferStreamingGenre, type DiscoveryTrack, type StreamingTrack } from "./streaming";
+import {
+  DISCOVERY_CATALOG,
+  FAMILIAR_LANDMARKS,
+  exactFamiliarLandmark,
+  inferStreamingGenre,
+  type DiscoveryTrack,
+  type StreamingTrack,
+} from "./streaming";
 
 export interface RadioTrack extends StreamingTrack {
   genre: string;
-  role: "playlist seed" | "unique seed" | "genre discovery" | "bridge discovery" | "wildcard discovery";
+  role:
+    | "playlist seed"
+    | "unique seed"
+    | "familiar seed"
+    | "genre discovery"
+    | "bridge discovery"
+    | "wildcard discovery";
   why: string;
   uniqueness: number;
 }
@@ -10,6 +23,7 @@ export interface RadioTrack extends StreamingTrack {
 export interface PlaylistRadio {
   tracks: RadioTrack[];
   uniqueSeeds: RadioTrack[];
+  familiarSeeds: RadioTrack[];
   genreCounts: { genre: string; count: number }[];
   title: string;
 }
@@ -129,6 +143,25 @@ function asRadioTrack(track: DiscoveryTrack, role: RadioTrack["role"], basis: st
   };
 }
 
+function asFamiliarSourceSeed(track: RadioTrack): RadioTrack {
+  return {
+    ...track,
+    role: "familiar seed",
+    why: "Recognizable source seed for orientation in the radio.",
+    uniqueness: Math.round(Math.max(0.48, track.uniqueness - 0.08) * 1000) / 1000,
+  };
+}
+
+function takeFamiliarLandmark(
+  genre: string,
+  used: Set<string>,
+  basis: string,
+): DiscoveryTrack | null {
+  const bridgeGenres = BRIDGES[genre] ?? [];
+  const pool = FAMILIAR_LANDMARKS.filter((track) => track.genre === genre || bridgeGenres.includes(track.genre));
+  return takeCatalogTrack(pool, used, `${basis}|familiar landmark`);
+}
+
 function genreCountsFor(tracks: RadioTrack[]): { genre: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const track of tracks) counts.set(track.genre, (counts.get(track.genre) ?? 0) + 1);
@@ -161,9 +194,15 @@ export function buildPlaylistRadio(
     role: "unique seed" as const,
     why: `Unique source seed: ${track.genre.toLowerCase()} is a smaller lane in this playlist.`,
   }));
+  const familiarSeeds = scoredSeeds
+    .filter((track) => exactFamiliarLandmark(track))
+    .slice(0, 2)
+    .map(asFamiliarSourceSeed);
 
   const used = new Set<string>(sourceTracks.map(key));
   const output: RadioTrack[] = [];
+  const familiarBudget = Math.min(3, Math.max(1, Math.floor(targetLength / 12)));
+  let familiarCount = 0;
   const dominantGenres = [...genreCounts.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([genre]) => genre);
@@ -172,6 +211,9 @@ export function buildPlaylistRadio(
     .slice(0, Math.min(3, scoredSeeds.length));
 
   for (const track of opening) output.push(track);
+  for (const seed of familiarSeeds) {
+    if (!output.some((track) => key(track) === key(seed))) output.push(seed);
+  }
 
   let uniqueIndex = 0;
   let guard = 0;
@@ -195,6 +237,15 @@ export function buildPlaylistRadio(
       output.push(asRadioTrack(picked, pool.role, `${genre}|${pool.role}|${guard}`));
     }
 
+    if (familiarCount < familiarBudget && output.length >= 7 && output.length < targetLength && guard % 3 === 1) {
+      const familiar = takeFamiliarLandmark(genre, used, `${genre}|${guard}|${sourceTracks.length}`);
+      if (familiar) {
+        used.add(key(familiar));
+        output.push(asRadioTrack(familiar, "familiar seed", `${genre}|familiar|${guard}`));
+        familiarCount += 1;
+      }
+    }
+
     if (uniqueSeeds.length && output.length >= Math.floor(targetLength * 0.45) && output.length < targetLength) {
       const seed = uniqueSeeds[uniqueIndex % uniqueSeeds.length]!;
       if (!output.some((track) => key(track) === key(seed))) output.push(seed);
@@ -211,6 +262,7 @@ export function buildPlaylistRadio(
   return {
     tracks: output.slice(0, targetLength),
     uniqueSeeds,
+    familiarSeeds,
     genreCounts: genreCountsFor(output),
     title: "Ultraviolet Unique-Seed Radio",
   };

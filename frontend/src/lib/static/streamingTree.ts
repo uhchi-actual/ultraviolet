@@ -1,5 +1,7 @@
 import {
   DISCOVERY_CATALOG,
+  FAMILIAR_LANDMARKS,
+  exactFamiliarLandmark,
   inferStreamingGenre,
   type DiscoveryTrack,
   type StreamingTrack,
@@ -17,7 +19,7 @@ const RELATED_GENRES: Record<string, string[]> = {
   International: ["Folk", "Electronic", "Experimental"],
 };
 
-type RecommendationAgent = "genre agent" | "bridge agent" | "diversity agent";
+type RecommendationAgent = "genre agent" | "bridge agent" | "diversity agent" | "familiar seed";
 
 interface PickedTrack {
   track: DiscoveryTrack;
@@ -42,7 +44,7 @@ function hash(value: string): number {
 }
 
 function confidence(seed: StreamingTrack, track: DiscoveryTrack, agent: RecommendationAgent): number {
-  const base = agent === "genre agent" ? 0.89 : agent === "bridge agent" ? 0.8 : 0.72;
+  const base = agent === "genre agent" ? 0.89 : agent === "bridge agent" ? 0.8 : agent === "familiar seed" ? 0.76 : 0.72;
   const jitter = (hash(`${trackKey(seed)}|${trackKey(track)}|${agent}`) % 90) / 1000;
   return Math.round(Math.min(0.98, base + jitter) * 1000) / 1000;
 }
@@ -60,7 +62,10 @@ function childLimit(numSeeds: number): number {
 
 function exactCatalogMatch(track: StreamingTrack): DiscoveryTrack | undefined {
   const key = trackKey(track);
-  return DISCOVERY_CATALOG.find((candidate) => trackKey(candidate) === key);
+  return (
+    DISCOVERY_CATALOG.find((candidate) => trackKey(candidate) === key) ||
+    exactFamiliarLandmark(track)
+  );
 }
 
 function ranked(pool: DiscoveryTrack[], basis: string): DiscoveryTrack[] {
@@ -81,9 +86,14 @@ function pickTracks(
   count: number,
   used: Set<string>,
   basis: string,
+  allowFamiliar: boolean,
 ): PickedTrack[] {
   const seedGenre = exactCatalogMatch(seed)?.genre ?? inferStreamingGenre(seed);
   const related = new Set(RELATED_GENRES[seedGenre] ?? []);
+  const familiarPool = FAMILIAR_LANDMARKS.filter(
+    (track) => track.genre === seedGenre || related.has(track.genre),
+  );
+  const familiarSlot = allowFamiliar && familiarPool.length && count >= 3 ? Math.min(1, count - 1) : -1;
   const pools: { agent: RecommendationAgent; tracks: DiscoveryTrack[] }[] = [
     {
       agent: "genre agent",
@@ -101,6 +111,14 @@ function pickTracks(
   const picks: PickedTrack[] = [];
 
   for (let i = 0; i < count; i++) {
+    if (i === familiarSlot) {
+      const familiar = takeFromPool(familiarPool, used, `${basis}|familiar landmark`);
+      if (familiar) {
+        used.add(trackKey(familiar));
+        picks.push({ track: familiar, agent: "familiar seed" });
+        continue;
+      }
+    }
     const agentOrder = [pools[i % pools.length]!, pools[(i + 1) % pools.length]!, pools[(i + 2) % pools.length]!];
     let picked: PickedTrack | null = null;
     for (const pool of agentOrder) {
@@ -145,8 +163,10 @@ export async function buildStreamingTreeStatic(body: {
   const layoutSeed = hash(seeds.map(trackKey).join("|"));
   const l1 = perSeedLimit(seeds.length, body.recs_per_seed);
   const l2 = childLimit(seeds.length);
+  const familiarBudget = Math.max(1, Math.min(3, Math.ceil(seeds.length / 10)));
+  let familiarCount = 0;
 
-  for (const seed of seeds) {
+  for (const [seedIndex, seed] of seeds.entries()) {
     const key = trackKey(seed);
     if (seedKeys.has(key)) continue;
     seedKeys.add(key);
@@ -164,17 +184,24 @@ export async function buildStreamingTreeStatic(body: {
     };
     nodes.push(seedNode);
 
-    const firstLayer = pickTracks(seed, l1, used, `${layoutSeed}|${key}|l1`);
+    const allowFamiliar =
+      familiarCount < familiarBudget &&
+      (seedIndex === seeds.length - 1 || hash(`${layoutSeed}|${key}|familiar`) % 5 === 0);
+    const firstLayer = pickTracks(seed, l1, used, `${layoutSeed}|${key}|l1`, allowFamiliar);
+    familiarCount += firstLayer.filter((pick) => pick.agent === "familiar seed").length;
     for (const pick of firstLayer) {
       const nodeId = graphId("rec", pick.track, seedNode.id);
       nodes.push({
         id: nodeId,
         title: pick.track.title,
         artist: pick.track.artist,
-        type: "ai_recommendation",
+        type: pick.agent === "familiar seed" ? "seed" : "ai_recommendation",
         confidence: confidence(seed, pick.track, pick.agent),
         genre_bucket: pick.track.genre,
-        why_summary: `${pick.agent} matched ${seed.artist} - ${seed.title}: ${pick.track.why}.`,
+        why_summary:
+          pick.agent === "familiar seed"
+            ? `Familiar landmark seed near ${seed.artist} - ${seed.title}: ${pick.track.why}.`
+            : `${pick.agent} matched ${seed.artist} - ${seed.title}: ${pick.track.why}.`,
         why_details: [],
         identifiers: {},
       });
@@ -186,17 +213,20 @@ export async function buildStreamingTreeStatic(body: {
       });
 
       if (!l2) continue;
-      const children = pickTracks(pick.track, l2, used, `${layoutSeed}|${trackKey(pick.track)}|l2`);
+      const children = pickTracks(pick.track, l2, used, `${layoutSeed}|${trackKey(pick.track)}|l2`, false);
       for (const child of children) {
         const childId = graphId("rec", child.track, nodeId);
         nodes.push({
           id: childId,
           title: child.track.title,
           artist: child.track.artist,
-          type: "ai_recommendation",
+          type: child.agent === "familiar seed" ? "seed" : "ai_recommendation",
           confidence: confidence(pick.track, child.track, child.agent),
           genre_bucket: child.track.genre,
-          why_summary: `${child.agent} branches from ${pick.track.artist} - ${pick.track.title}: ${child.track.why}.`,
+          why_summary:
+            child.agent === "familiar seed"
+              ? `Familiar landmark seed near ${pick.track.artist} - ${pick.track.title}: ${child.track.why}.`
+              : `${child.agent} branches from ${pick.track.artist} - ${pick.track.title}: ${child.track.why}.`,
           why_details: [],
           identifiers: {},
         });

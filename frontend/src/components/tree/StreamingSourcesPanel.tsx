@@ -349,6 +349,30 @@ export function StreamingSourcesPanel({
                     );
                   })}
                 </div>
+                {radio.familiarSeeds.length ? (
+                  <div className="mt-4 border-t border-uv-border pt-3">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
+                      Familiar anchors
+                    </p>
+                    <div className="mt-2 space-y-2">
+                      {radio.familiarSeeds.map((track) => {
+                        const motif = motifForGenre(track.genre);
+                        return (
+                          <div key={`${track.artist}-${track.title}`} className="min-w-0">
+                            <p className="truncate text-sm font-medium text-uv-text-primary">{track.title}</p>
+                            <p className="truncate text-xs text-uv-text-muted">{track.artist}</p>
+                            <p
+                              className="mt-1 inline-flex rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em]"
+                              style={{ borderColor: motif.primary, color: motif.primary }}
+                            >
+                              {track.genre} / familiar
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="grid max-h-72 gap-2 overflow-auto pr-1 sm:grid-cols-2">

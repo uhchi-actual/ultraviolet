@@ -11,6 +11,7 @@ export interface StreamingTrack {
 export interface DiscoveryTrack extends StreamingTrack {
   genre: string;
   why: string;
+  familiarity?: "mainstream";
 }
 
 export interface GenreAnalysis {
@@ -171,12 +172,49 @@ export const DISCOVERY_CATALOG: DiscoveryTrack[] = [
   { artist: "Portishead", title: "Roads", genre: "Experimental", why: "noir trip-hop despair", source: "curated" },
 ];
 
+export const FAMILIAR_LANDMARKS: DiscoveryTrack[] = [
+  { artist: "Nirvana", title: "Smells Like Teen Spirit", genre: "Rock", why: "recognizable grunge landmark", source: "curated", familiarity: "mainstream" },
+  { artist: "The Killers", title: "Mr. Brightside", genre: "Rock", why: "familiar indie-rock pressure point", source: "curated", familiarity: "mainstream" },
+  { artist: "Radiohead", title: "Creep", genre: "Rock", why: "well-known outsider-rock anchor", source: "curated", familiarity: "mainstream" },
+  { artist: "Foo Fighters", title: "Everlong", genre: "Rock", why: "mainstream guitar catharsis", source: "curated", familiarity: "mainstream" },
+  { artist: "Metallica", title: "Nothing Else Matters", genre: "Rock", why: "widely recognized heavy ballad", source: "curated", familiarity: "mainstream" },
+  { artist: "Fleetwood Mac", title: "Dreams", genre: "Pop", why: "classic pop-rock reference point", source: "curated", familiarity: "mainstream" },
+  { artist: "The Weeknd", title: "Blinding Lights", genre: "Pop", why: "neon pop landmark", source: "curated", familiarity: "mainstream" },
+  { artist: "Dua Lipa", title: "Levitating", genre: "Pop", why: "bright mainstream dance-pop", source: "curated", familiarity: "mainstream" },
+  { artist: "Billie Eilish", title: "bad guy", genre: "Pop", why: "minimal pop reference point", source: "curated", familiarity: "mainstream" },
+  { artist: "Lorde", title: "Royals", genre: "Pop", why: "spare pop breakout", source: "curated", familiarity: "mainstream" },
+  { artist: "Daft Punk", title: "One More Time", genre: "Electronic", why: "mainstream electronic celebration", source: "curated", familiarity: "mainstream" },
+  { artist: "Gorillaz", title: "Feel Good Inc.", genre: "Electronic", why: "familiar animated-pop groove", source: "curated", familiarity: "mainstream" },
+  { artist: "Avicii", title: "Levels", genre: "Electronic", why: "festival electronic landmark", source: "curated", familiarity: "mainstream" },
+  { artist: "OutKast", title: "Hey Ya!", genre: "Hip-Hop", why: "ubiquitous rap-pop pivot", source: "curated", familiarity: "mainstream" },
+  { artist: "Kendrick Lamar", title: "HUMBLE.", genre: "Hip-Hop", why: "mainstream rap anchor", source: "curated", familiarity: "mainstream" },
+  { artist: "Missy Elliott", title: "Get Ur Freak On", genre: "Hip-Hop", why: "recognizable left-field rap hit", source: "curated", familiarity: "mainstream" },
+  { artist: "Eminem", title: "Lose Yourself", genre: "Hip-Hop", why: "canonical motivational rap hit", source: "curated", familiarity: "mainstream" },
+  { artist: "Tracy Chapman", title: "Fast Car", genre: "Folk", why: "plainspoken folk-pop landmark", source: "curated", familiarity: "mainstream" },
+  { artist: "Fleetwood Mac", title: "Landslide", genre: "Folk", why: "familiar acoustic anchor", source: "curated", familiarity: "mainstream" },
+  { artist: "Bon Iver", title: "Skinny Love", genre: "Folk", why: "recognizable indie-folk entry point", source: "curated", familiarity: "mainstream" },
+  { artist: "Hans Zimmer", title: "Time", genre: "Instrumental", why: "widely recognized cinematic instrumental", source: "curated", familiarity: "mainstream" },
+  { artist: "Miles Davis", title: "So What", genre: "Instrumental", why: "canonical jazz reference point", source: "curated", familiarity: "mainstream" },
+  { artist: "Bad Bunny", title: "Titi Me Pregunto", genre: "International", why: "global reggaeton landmark", source: "curated", familiarity: "mainstream" },
+  { artist: "Rosalia", title: "Despecha", genre: "International", why: "recognizable flamenco-pop crossover", source: "curated", familiarity: "mainstream" },
+  { artist: "Radiohead", title: "Everything In Its Right Place", genre: "Experimental", why: "familiar experimental-pop gateway", source: "curated", familiarity: "mainstream" },
+];
+
 function clean(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
 function dedupeKey(track: StreamingTrack): string {
   return `${track.artist}|${track.title}`.toLowerCase();
+}
+
+export function streamingTrackKey(track: Pick<StreamingTrack, "artist" | "title">): string {
+  return `${clean(track.artist)}|${clean(track.title)}`.toLowerCase();
+}
+
+export function exactFamiliarLandmark(track: Pick<StreamingTrack, "artist" | "title">): DiscoveryTrack | undefined {
+  const key = streamingTrackKey(track);
+  return FAMILIAR_LANDMARKS.find((candidate) => streamingTrackKey(candidate) === key);
 }
 
 function hash(value: string): number {
@@ -214,16 +252,16 @@ export function parseTrackLines(text: string, source: StreamingTrack["source"] =
 
 export function inferStreamingGenre(track: StreamingTrack): string {
   const q = `${track.artist} ${track.title} ${track.album ?? ""}`.toLowerCase();
-  if (/hip.?hop|rap|dilla|doom|tribe|nujabes|kendrick|jpegmafia|madvillain/.test(q)) return "Hip-Hop";
-  if (/ambient|eno|grouper|basinski|hecker|stars of the lid|instrumental|drone/.test(q)) {
+  if (/hip.?hop|rap|dilla|doom|tribe|nujabes|kendrick|jpegmafia|madvillain|outkast|missy|eminem|drake/.test(q)) return "Hip-Hop";
+  if (/ambient|eno|grouper|basinski|hecker|stars of the lid|instrumental|drone|hans zimmer|miles davis|jazz/.test(q)) {
     return "Instrumental";
   }
-  if (/house|techno|burial|bicep|overmono|four tet|floating points|caribou|stussy|fred again|aphex|boards|electronic|dj /.test(q)) {
+  if (/house|techno|burial|bicep|overmono|four tet|floating points|caribou|stussy|fred again|aphex|boards|electronic|dj |daft punk|gorillaz|avicii/.test(q)) {
     return "Electronic";
   }
-  if (/folk|sufjan|big thief|adrianne|americana|lenker|elliott smith/.test(q)) return "Folk";
-  if (/tinariwen|altin|mdou|fela|brazil|afro|latin|klezmer/.test(q)) return "International";
-  if (/idles|metz|viagra boys|bauhaus|cure|joy division|new order|depeche|fontaines|molchat|rock|punk|metal|goth|darkwave/.test(q)) {
+  if (/folk|sufjan|big thief|adrianne|americana|lenker|elliott smith|tracy chapman|fast car|landslide|skinny love/.test(q)) return "Folk";
+  if (/tinariwen|altin|mdou|fela|brazil|afro|latin|klezmer|bad bunny|rosalia|reggaeton/.test(q)) return "International";
+  if (/idles|metz|viagra boys|bauhaus|cure|joy division|new order|depeche|fontaines|molchat|rock|punk|metal|goth|darkwave|nirvana|killers|radiohead|foo fighters|metallica/.test(q)) {
     return "Rock";
   }
   return "Pop";
