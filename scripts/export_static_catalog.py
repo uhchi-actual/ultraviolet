@@ -3,33 +3,176 @@
 from __future__ import annotations
 
 import json
-import struct
+import os
 import sys
 from pathlib import Path
 
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "backend"))
-
-from src.config import settings  # noqa: E402
 
 OUT = ROOT / "frontend" / "public" / "data"
 EMBED_DIM = 512
 
-BUCKETS = (
-    "darkwave",
-    "post_punk",
-    "electronic",
-    "dance",
-    "ambient",
-    "industrial",
-    "indie",
-    "synth",
+DEFAULT_BUCKETS = (
+    "Electronic",
+    "Rock",
+    "Pop",
+    "Folk",
+    "Instrumental",
+    "Hip-Hop",
+    "International",
+    "Experimental",
+)
+
+TASTE_PROTOTYPE_GROUPS = (
+    {
+        "bucket": "Rock",
+        "anchors": (
+            "Future Islands",
+            "High Places",
+            "Indian Jewelry",
+            "Kinski",
+            "Thee Oh Sees",
+            "Ariel Pink's Haunted Graffiti",
+            "Twin Sister",
+            "Sun Araw",
+            "CAVE",
+        ),
+        "aliases": (
+            "new order",
+            "joy division",
+            "the cure",
+            "depeche mode",
+            "bauhaus",
+            "siouxsie and the banshees",
+            "the chameleons",
+            "echo and the bunnymen",
+            "interpol",
+            "the smiths",
+            "the jesus and mary chain",
+            "fontaines dc",
+            "fontaines d c",
+            "idles",
+            "molchat doma",
+            "ceremony",
+            "plainsong",
+        ),
+    },
+    {
+        "bucket": "Electronic",
+        "anchors": (
+            "Dan Deacon",
+            "Future Islands",
+            "High Places",
+            "Goto80",
+            "Covox",
+            "Mochipet",
+            "Mr. Moods",
+            "junior85",
+        ),
+        "aliases": (
+            "chris stussy",
+            "fred again",
+            "fred again..",
+            "daft punk",
+            "aphex twin",
+            "burial",
+            "boards of canada",
+            "four tet",
+            "caribou",
+            "jamie xx",
+            "overmono",
+            "bicep",
+            "floating points",
+            "disclosure",
+            "justice",
+            "the chemical brothers",
+            "chemical brothers",
+            "kraftwerk",
+            "underworld",
+            "lcd soundsystem",
+            "talking heads",
+        ),
+    },
+    {
+        "bucket": "Pop",
+        "anchors": (
+            "Kurt Vile",
+            "Cryptacize",
+            "Carroll",
+            "Azure Blue",
+            "So Cow",
+            "The Slants",
+            "Au",
+            "Twin Sister",
+        ),
+        "aliases": (
+            "kurt vile",
+            "pavement",
+            "mac demarco",
+            "yo la tengo",
+            "tame impala",
+            "unknown mortal orchestra",
+            "alex g",
+            "beach house",
+            "big thief",
+            "alvvays",
+            "the strokes",
+            "ariel pink",
+            "thee oh sees",
+            "future islands",
+            "high places",
+        ),
+    },
+    {
+        "bucket": "Instrumental",
+        "anchors": (
+            "Blue Dot Sessions",
+            "Ambienteer",
+            "Lee Rosevere",
+        ),
+        "aliases": (
+            "brian eno",
+            "grouper",
+            "william basinski",
+            "tim hecker",
+            "stars of the lid",
+            "ambient",
+            "drone",
+        ),
+    },
+    {
+        "bucket": "Hip-Hop",
+        "anchors": (
+            "Beastie Boys",
+            "Kellee Maize",
+            "Cullah",
+            "Tha Silent Partner",
+        ),
+        "aliases": (
+            "beastie boys",
+            "madlib",
+            "j dilla",
+            "jdilla",
+            "mf doom",
+            "a tribe called quest",
+            "hip hop",
+        ),
+    },
 )
 
 
+def norm_key(value: str) -> str:
+    chars = [c.lower() if c.isalnum() else " " for c in value.replace("&", " and ")]
+    return " ".join("".join(chars).split())
+
+
 def infer_bucket(track: dict) -> str:
+    existing = str(track.get("genre_bucket") or track.get("genre_top") or "").strip()
+    if existing:
+        return existing
+
     ids = track.get("identifiers") or {}
     tempo = float(ids.get("tempo", 120))
     energy = float(ids.get("energy", 0.5))
@@ -39,25 +182,34 @@ def infer_bucket(track: dict) -> str:
     rhythm = float(ids.get("rhythmic_complexity", 0.5))
     vocals = float((ids.get("stem_presence") or {}).get("vocals_pct", 15))
     if darkness >= 0.72 and tempo < 135:
-        return "darkwave"
+        return "Rock"
     if darkness >= 0.6 and rhythm >= 0.45:
-        return "post_punk"
+        return "Rock"
     if dance >= 0.72 and tempo >= 118:
-        return "dance"
+        return "Electronic"
     if energy >= 0.72 and rhythm >= 0.5:
-        return "electronic"
+        return "Electronic"
     if energy <= 0.42 and texture >= 0.55:
-        return "ambient"
+        return "Instrumental"
     if texture >= 0.7 and vocals <= 12:
-        return "industrial"
+        return "Experimental"
     if tempo >= 110 and dance >= 0.55 and darkness < 0.5:
-        return "synth"
-    return "indie"
+        return "Pop"
+    return "Pop"
+
+
+def normalized_vector(vec: np.ndarray) -> np.ndarray:
+    out = np.asarray(vec, dtype=np.float32)
+    norm = float(np.linalg.norm(out))
+    if norm > 1e-9:
+        out = out / norm
+    return out
 
 
 def main() -> int:
-    index_path = Path(settings.catalog_dir) / "fma_index.json"
-    npz_path = Path(settings.catalog_dir) / "fma_clap.npz"
+    catalog_dir = Path(os.environ.get("CATALOG_DIR", r"D:\ultraviolet-data\catalog"))
+    index_path = catalog_dir / "fma_index.json"
+    npz_path = catalog_dir / "fma_clap.npz"
     if not index_path.exists() or not npz_path.exists():
         print("Missing catalog — run FMA pipeline first", file=sys.stderr)
         return 1
@@ -72,8 +224,15 @@ def main() -> int:
 
     rows: list[int] = []
     slim: list[dict] = []
-    bucket_sums = {b: np.zeros(EMBED_DIM, dtype=np.float64) for b in BUCKETS}
-    bucket_counts = {b: 0 for b in BUCKETS}
+    bucket_order = list(DEFAULT_BUCKETS)
+    bucket_sums = {b: np.zeros(EMBED_DIM, dtype=np.float64) for b in bucket_order}
+    bucket_counts = {b: 0 for b in bucket_order}
+
+    def ensure_bucket(bucket: str) -> None:
+        if bucket not in bucket_sums:
+            bucket_order.append(bucket)
+            bucket_sums[bucket] = np.zeros(EMBED_DIM, dtype=np.float64)
+            bucket_counts[bucket] = 0
 
     for track in tracks:
         tid = track["track_id"]
@@ -83,6 +242,7 @@ def main() -> int:
         rows.append(row)
         vec = emb[row]
         bucket = infer_bucket(track)
+        ensure_bucket(bucket)
         bucket_sums[bucket] += vec.astype(np.float64)
         bucket_counts[bucket] += 1
         slim.append(
@@ -105,33 +265,38 @@ def main() -> int:
     with (OUT / "fma-embeddings.bin").open("wb") as fh:
         fh.write(matrix.astype(np.float32).tobytes())
 
+    centroid_by_bucket: dict[str, np.ndarray] = {}
     centroids: list[list[float]] = []
-    for b in BUCKETS:
+    for b in bucket_order:
         if bucket_counts[b] > 0:
-            c = (bucket_sums[b] / bucket_counts[b]).astype(np.float32)
-            n = float(np.linalg.norm(c))
-            if n > 1e-9:
-                c = c / n
+            c = normalized_vector(bucket_sums[b] / bucket_counts[b])
+            centroid_by_bucket[b] = c
             centroids.append(c.tolist())
         else:
-            centroids.append([0.0] * EMBED_DIM)
+            zero = np.zeros(EMBED_DIM, dtype=np.float32)
+            centroid_by_bucket[b] = zero
+            centroids.append(zero.tolist())
 
-    (OUT / "bucket-centroids.json").write_text(json.dumps({"buckets": list(BUCKETS), "vectors": centroids}))
+    (OUT / "bucket-centroids.json").write_text(json.dumps({"buckets": bucket_order, "vectors": centroids}))
 
-    # Offline CLAP text prototypes for common demo seeds
+    artist_to_rows: dict[str, list[int]] = {}
+    for i, track in enumerate(slim):
+        artist_to_rows.setdefault(norm_key(track["artist"]), []).append(i)
+
+    # Catalog-derived taste prototypes for common stale-rotation seeds.
+    # They avoid loading a text model during CI and keep Pages fully static.
     prototypes: dict[str, list[float]] = {}
-    try:
-        from src.scoring.clap_driver import embed_text
-
-        for label in (
-            "New Order — Ceremony, post-punk, electronic, song, music",
-            "The Cure — Plainsong, gothic rock, song, music",
-            "Joy Division — Ceremony, post-punk, song, music",
-            "Kurt Vile — Freeway, indie rock, song, music",
-        ):
-            prototypes[label.split("—")[0].strip().lower()] = embed_text(label)
-    except Exception as exc:
-        print(f"Warning: text prototypes skipped ({exc})", file=sys.stderr)
+    for group in TASTE_PROTOTYPE_GROUPS:
+        vectors: list[np.ndarray] = []
+        for anchor in group["anchors"]:
+            for row_idx in artist_to_rows.get(norm_key(anchor), []):
+                vectors.append(np.asarray(matrix[row_idx], dtype=np.float32))
+        if vectors:
+            proto = normalized_vector(np.mean(vectors, axis=0))
+        else:
+            proto = centroid_by_bucket.get(group["bucket"], np.zeros(EMBED_DIM, dtype=np.float32))
+        for alias in group["aliases"]:
+            prototypes[norm_key(alias)] = proto.tolist()
 
     (OUT / "seed-prototypes.json").write_text(json.dumps(prototypes, separators=(",", ":")))
 

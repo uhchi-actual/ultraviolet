@@ -12,6 +12,8 @@ function parseSongs(text: string): { title: string; artist: string }[] {
     .filter(Boolean)
     .slice(0, 50)
     .map((line) => {
+      const byDash = line.match(/^(.+?)\s+[-\u2013\u2014]\s+(.+)$/);
+      if (byDash) return { artist: byDash[1]!.trim(), title: byDash[2]!.trim() };
       const by = line.match(/^(.+?)\s+[-–—]\s+(.+)$/);
       if (by) return { artist: by[1].trim(), title: by[2].trim() };
       const by2 = line.match(/^(.+?)\s+by\s+(.+)$/i);
@@ -27,7 +29,9 @@ export function ManualTreeBuilder({
   onBuilt: (graph: TreeGraph) => void;
   onError?: (msg: string) => void;
 }) {
-  const [text, setText] = useState("New Order - Ceremony");
+  const [text, setText] = useState(
+    "New Order - Ceremony\nThe Cure - Plainsong\nDepeche Mode - Enjoy the Silence\nFred again.. - Delilah\nKurt Vile - Pretty Pimpin",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recsPerSeed, setRecsPerSeed] = useState(12);
@@ -57,12 +61,12 @@ export function ManualTreeBuilder({
   return (
     <section className="rounded-xl border border-uv-border bg-uv-bg-surface/70 p-5">
       <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-uv-purple-bright">
-        Manual tree
+        My rotation
       </h3>
       <p className="mt-2 text-sm text-uv-text-secondary">
         Type up to <strong className="text-uv-text-primary">50 songs</strong> — one per line. Format:{" "}
         <code className="text-uv-text-primary">Artist - Title</code>. Any song works — we match FMA when
-        possible, otherwise CLAP text embeddings. No upload or account needed.
+        possible, otherwise taste prototypes. No upload or account needed.
       </p>
       <textarea
         value={text}

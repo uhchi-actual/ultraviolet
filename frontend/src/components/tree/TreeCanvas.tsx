@@ -20,6 +20,12 @@ function hashFloat(s: string): number {
   return (h % 1000) / 1000;
 }
 
+function searchLink(node: TreeNode, service: "spotify" | "youtube"): string {
+  const query = encodeURIComponent(`${node.artist} ${node.title}`.trim());
+  if (service === "spotify") return `https://open.spotify.com/search/${query}`;
+  return `https://www.youtube.com/results?search_query=${query}`;
+}
+
 function TrackNodeButton({
   node,
   pos,
@@ -153,6 +159,24 @@ export function TreeCanvas({ graph }: { graph: TreeGraph }) {
             {selected.why_summary ? (
               <p className="mt-3 text-sm leading-relaxed text-uv-text-primary">{selected.why_summary}</p>
             ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a
+                href={searchLink(selected, "spotify")}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-uv-border bg-uv-bg-elevated px-3 py-1.5 text-xs font-medium text-uv-text-primary hover:border-uv-purple-bright"
+              >
+                Spotify
+              </a>
+              <a
+                href={searchLink(selected, "youtube")}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg border border-uv-border bg-uv-bg-elevated px-3 py-1.5 text-xs font-medium text-uv-text-primary hover:border-uv-purple-bright"
+              >
+                YouTube
+              </a>
+            </div>
           </motion.aside>
         ) : null}
       </AnimatePresence>

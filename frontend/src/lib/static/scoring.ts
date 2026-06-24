@@ -1,5 +1,5 @@
 import type { CatalogTrack } from "./catalog";
-import { EMBED_DIM, getCentroid, getPrototype } from "./catalog";
+import { EMBED_DIM } from "./catalog";
 
 const MIN_SIMILARITY = 0.6;
 
@@ -47,8 +47,48 @@ export function graphScore(a: CatalogTrack, b: CatalogTrack): number {
   const gb = (b.genre_top || "").toLowerCase();
   if (ga && ga === gb) return 1;
   if (ga && gb && (ga.includes(gb) || gb.includes(ga))) return 0.7;
-  if (a.genre_bucket && a.genre_bucket === b.genre_bucket) return 0.55;
+  if (a.genre_bucket && a.genre_bucket === b.genre_bucket) return 0.78;
   return 0.1;
+}
+
+const QUEUEABLE_ARTIST_HINTS = [
+  "aerial pink",
+  "ariel pink",
+  "azure blue",
+  "beastie boys",
+  "carroll",
+  "cave",
+  "covox",
+  "cryptacize",
+  "dan deacon",
+  "future islands",
+  "goto80",
+  "high places",
+  "indian jewelry",
+  "kinski",
+  "kurt vile",
+  "lightning bolt",
+  "mochipet",
+  "mr. moods",
+  "so cow",
+  "sun araw",
+  "the slants",
+  "thee oh sees",
+  "twin sister",
+];
+
+function qualityPrior(track: CatalogTrack): number {
+  const artist = (track.artist || "").toLowerCase();
+  const title = (track.title || "").toLowerCase();
+  let score = 0.45;
+  if (QUEUEABLE_ARTIST_HINTS.some((hint) => artist.includes(hint))) score += 0.45;
+  if (["Electronic", "Rock", "Pop", "Folk"].includes(track.genre_bucket || track.genre_top || "")) {
+    score += 0.1;
+  }
+  if (/\b(track|part|segment)\s*\d+\b|interview|chat w\/|untitled|skit|intro|outro|bonus/.test(title)) {
+    score -= 0.35;
+  }
+  return Math.max(0, Math.min(1, score));
 }
 
 export interface UltravioletGrade {
@@ -89,7 +129,7 @@ export function applyObscurityBonus(sim: number, _pop: number, dial: number): nu
 }
 
 function effectiveMinScore(catalogSize: number, depth: number, parent: CatalogTrack): number {
-  if (parent.source === "clap_text" || parent.source === "prototype") return 0.03;
+  if (parent.source === "clap_text" || parent.source === "prototype") return 0.25;
   let floor = MIN_SIMILARITY * 0.65;
   if (catalogSize > 1000) floor = 0.45;
   return Math.max(0.35, floor - depth * 0.02);
@@ -120,24 +160,27 @@ export function scoreCatalog(
 
     let grade: UltravioletGrade;
     let sim: number;
+    const prior = qualityPrior(track);
     if (parent.source === "clap_text" || parent.source === "prototype") {
-      sim = clapSimilarity(parent.clap_embedding || [], track.clap_embedding || []);
+      const sClap = clapSimilarity(parent.clap_embedding || [], track.clap_embedding || []);
+      const sGraph = graphScore(parent, track);
+      sim = 0.58 * sClap + 0.32 * sGraph + 0.1 * prior;
       grade = {
         score: sim,
-        confidence: 0.5,
-        agreement: "clap_text",
-        drivers: { clap: sim, stem: 0, spectral: 0, graph: 0 },
+        confidence: 0.62,
+        agreement: "taste_seed",
+        drivers: { clap: sClap, stem: prior, spectral: 0, graph: sGraph },
       };
     } else {
       grade = ultravioletScore(parent, track);
-      sim = grade.score;
+      sim = 0.92 * grade.score + 0.08 * prior;
     }
     if (sim < minScore) continue;
     scored.push({
       track,
       similarity: sim,
-      final_score: applyObscurityBonus(sim, 0, obscurityDial),
-      genre_bucket: track.genre_bucket || "indie",
+      final_score: applyObscurityBonus(sim + prior * 0.04, 0, obscurityDial),
+      genre_bucket: track.genre_bucket || track.genre_top || "Pop",
       ultraviolet_grade: grade,
     });
   }
@@ -208,24 +251,41 @@ export function recommendBranches(
 ): ScoredPick[] {
   const scored = scoreCatalog(parent, catalog, excludeIds, excludeKeys, obscurityDial, depth);
   if (!scored.length) return [];
-  const genreN = Math.min(count, Math.max(4, Math.floor(count / 2)));
-  const genrePicks = pickGenreDiverse(scored, genreN);
+  const parentBucket = parent.genre_bucket || parent.genre_top || "";
+  const sameBucket = parentBucket ? scored.filter((s) => s.genre_bucket === parentBucket) : [];
+  const focusedCount = sameBucket.length >= count ? Math.ceil(count * 0.75) : 0;
+  const focusedPicks = focusedCount ? pickMmr(sameBucket, focusedCount) : [];
+  const focusedIds = new Set(focusedPicks.map((p) => p.track.track_id));
+  const remainder = scored.filter((s) => !focusedIds.has(s.track.track_id));
+  const genreN = Math.min(count - focusedPicks.length, Math.max(2, Math.floor(count / 4)));
+  const genrePicks = pickGenreDiverse(remainder, genreN);
   const genreIds = new Set(genrePicks.map((p) => p.track.track_id));
-  const remainder = scored.filter((s) => !genreIds.has(s.track.track_id));
-  const mmrPicks = pickMmr(remainder, count - genrePicks.length);
-  const merged = [...genrePicks, ...mmrPicks];
+  const mmrPool = remainder.filter((s) => !genreIds.has(s.track.track_id));
+  const mmrPicks = pickMmr(mmrPool, count - focusedPicks.length - genrePicks.length);
+  const merged = [...focusedPicks, ...genrePicks, ...mmrPicks];
   merged.sort((a, b) => b.final_score - a.final_score);
   return merged.slice(0, count);
 }
 
 export function inferBucketFromQuery(title: string, artist: string): string {
   const q = `${artist} ${title}`.toLowerCase();
-  if (/cure|bauhaus|joy|post.?punk|goth|darkwave|new order|depeche/.test(q)) return "post_punk";
-  if (/techno|house|electronic|daft|aphex/.test(q)) return "electronic";
-  if (/ambient|eno|drone/.test(q)) return "ambient";
-  if (/industrial|nine inch|skinny puppy/.test(q)) return "industrial";
-  if (/dance|disco|lcd/.test(q)) return "dance";
-  return "indie";
+  if (/hip.?hop|rap|beastie|madlib|dilla|doom|tribe/.test(q)) return "Hip-Hop";
+  if (/ambient|eno|drone|grouper|basinski|tim hecker|stars of the lid/.test(q)) {
+    return "Instrumental";
+  }
+  if (
+    /chris stussy|fred again|daft|aphex|burial|boards of canada|four tet|caribou|jamie xx|overmono|bicep|floating points|disclosure|justice|chemical brothers|kraftwerk|underworld|lcd|talking heads|house|techno|electronic|dance|disco|synth/.test(q)
+  ) {
+    return "Electronic";
+  }
+  if (
+    /cure|bauhaus|joy division|post.?punk|goth|darkwave|new order|depeche|siouxsie|chameleons|echo and the bunnymen|interpol|smiths|jesus and mary chain|fontaines|idles|molchat|punk|rock|thee oh sees|pavement/.test(q)
+  ) {
+    return "Rock";
+  }
+  if (/folk|country|americana|singer.?songwriter/.test(q)) return "Folk";
+  if (/experimental|noise|industrial|nine inch|skinny puppy/.test(q)) return "Experimental";
+  return "Pop";
 }
 
 export function blendEmbeddings(items: { w: number; vec: number[] }[]): number[] {

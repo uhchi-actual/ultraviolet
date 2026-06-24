@@ -168,7 +168,7 @@ export async function buildManualTreeStatic(body: {
       type: "ai_recommendation",
       confidence: rec.confidence,
       genre_bucket: rec.genre_bucket,
-      why_summary: "Branches from shared CLAP + spectral markers in the FMA catalog.",
+      why_summary: `Branches through ${rec.genre_bucket || "nearby"} taste, CLAP proximity, and catalog quality signals.`,
       why_details: [],
       identifiers: rec.identifiers as TreeNode["identifiers"],
     });

@@ -26,6 +26,15 @@ let _centroids: BucketCentroids | null = null;
 let _prototypes: Record<string, number[]> | null = null;
 let _load: Promise<void> | null = null;
 
+export function prototypeKey(key: string): string {
+  return key
+    .replace(/&/g, " and ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function loadCatalog(): Promise<void> {
   if (_load) return _load;
   _load = (async () => {
@@ -70,7 +79,8 @@ export function getCentroid(bucket: string): number[] | null {
 }
 
 export function getPrototype(key: string): number[] | null {
-  return _prototypes?.[key.toLowerCase()] ?? null;
+  if (!_prototypes) return null;
+  return _prototypes[key.toLowerCase()] ?? _prototypes[prototypeKey(key)] ?? null;
 }
 
 export function trackDedupeKey(t: CatalogTrack): string {

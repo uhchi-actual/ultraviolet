@@ -1,5 +1,5 @@
 import type { CatalogTrack } from "./catalog";
-import { getCatalog, getCentroid, getPrototype, trackDedupeKey } from "./catalog";
+import { getCatalog, getCentroid, getPrototype, prototypeKey, trackDedupeKey } from "./catalog";
 import {
   blendEmbeddings,
   defaultIdentifiers,
@@ -30,6 +30,11 @@ export function searchFma(query: string, limit = 12): CatalogTrack[] {
   const catalog = getCatalog();
   let title = query.trim();
   let artist = "";
+  const byDash = query.match(/^(.+?)\s+[-\u2013\u2014]\s+(.+)$/);
+  if (byDash) {
+    artist = byDash[1]!.trim();
+    title = byDash[2]!.trim();
+  }
   for (const sep of [" - ", " – ", " — "]) {
     if (query.includes(sep)) {
       [artist, title] = query.split(sep, 2).map((s) => s.trim());
@@ -57,7 +62,11 @@ function resolveFmaSeed(title: string, artist: string): CatalogTrack | null {
 }
 
 function resolvePrototypeSeed(title: string, artist: string): CatalogTrack | null {
-  const keys = [artist.toLowerCase(), title.toLowerCase(), `${artist} ${title}`.toLowerCase()];
+  const keys = [
+    prototypeKey(artist),
+    prototypeKey(title),
+    prototypeKey(`${artist} ${title}`),
+  ];
   for (const k of keys) {
     const proto = getPrototype(k);
     if (proto?.length) {

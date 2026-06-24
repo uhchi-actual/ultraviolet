@@ -7,7 +7,7 @@ export default function AnalyzePage() {
       <PageHeader
         eyebrow="DJ agent"
         title="Analyze"
-        description="Upload a track. Demucs separates drums, bass, vocals, and other — then we measure only what the stems actually support."
+        description="Search the baked FMA catalog in-browser. Upload and stem separation are available only in the local full stack."
       />
       <AnalyzePanel />
     </div>

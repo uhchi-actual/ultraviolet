@@ -1,18 +1,17 @@
 # Ultraviolet
 
-> Multi-Agent Music Recommendation Engine with Explainable Traceback Tree
+> Browser-only music discovery demo with an explainable recommendation Tree.
 
-Ultraviolet is a locally-deployed, content-based music recommendation engine. It
-understands a user's musical identity through personal-data ingestion (RAG) and
-real-time audio analysis, then generates niche, explainable recommendations with
-an interactive Tree showing **why** each track was suggested.
+**Live demo:** https://uhchi-actual.github.io/ultraviolet/
 
-Unlike collaborative filtering ("users who played X also played Y"), Ultraviolet
-analyzes the audio itself, so a track with 12 plays gets the same 15-identifier
-fingerprint as one with 50 million streams. The system actively surfaces
-lesser-known artists.
+Open the Tree, paste songs you already play, and generate a client-side discovery
+graph over 7,994 FMA tracks. No install, no account, no backend.
 
-See [`ULTRAVIOLET_PRD.md`](../ultraviolet/ULTRAVIOLET_PRD.md) for the full product spec.
+![Ultraviolet Tree demo](docs/assets/tree-demo.png)
+
+Ultraviolet is a content-based music recommendation engine. Unlike collaborative
+filtering ("users who played X also played Y"), it scores audio/catalog features
+directly and shows the recommendation chain in an interactive Tree.
 
 ---
 
