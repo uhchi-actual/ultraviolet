@@ -4,28 +4,25 @@ import { useState } from "react";
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { buildManualTree } from "@/lib/api";
+import { parseTrackLines } from "@/lib/streaming";
 import type { TreeGraph } from "@/lib/types";
 
-import {
-  DEFAULT_ROTATION_SEEDS,
-  ManualTreeBuilder,
-  parseSongs,
-} from "./ManualTreeBuilder";
 import { StreamingSourcesPanel } from "./StreamingSourcesPanel";
 import { TreeCanvas } from "./TreeCanvas";
 
 export function TreePanel() {
   const [graph, setGraph] = useState<TreeGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [seedText, setSeedText] = useState(DEFAULT_ROTATION_SEEDS);
 
   async function buildFromText(text: string) {
-    const songs = parseSongs(text);
+    const songs = parseTrackLines(text).map((track) => ({
+      title: track.title,
+      artist: track.artist,
+    }));
     if (!songs.length) {
       setError("Enter at least one song.");
       return;
     }
-    setSeedText(text);
     setError(null);
     try {
       const res = await buildManualTree({ songs, recs_per_seed: 12 });
@@ -47,23 +44,10 @@ export function TreePanel() {
 
       <div className="mx-auto max-w-[1500px]">
         <StreamingSourcesPanel
-          onUseSeeds={setSeedText}
           onBuild={(text) => {
             void buildFromText(text);
           }}
         />
-
-        <div className="mb-5">
-          <ManualTreeBuilder
-            seedText={seedText}
-            onSeedTextChange={setSeedText}
-            onBuilt={(g) => {
-              setError(null);
-              setGraph(g);
-            }}
-            onError={setError}
-          />
-        </div>
 
         {error ? <p className="mb-4 text-sm text-uhchi-red-bright">{error}</p> : null}
 

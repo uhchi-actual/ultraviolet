@@ -53,10 +53,8 @@ function linkRow(track: StreamingTrack | DiscoveryTrack) {
 }
 
 export function StreamingSourcesPanel({
-  onUseSeeds,
   onBuild,
 }: {
-  onUseSeeds: (text: string) => void;
   onBuild: (text: string) => void;
 }) {
   const [pasteText, setPasteText] = useState(STARTER_ROTATION);
@@ -98,10 +96,6 @@ export function StreamingSourcesPanel({
   const analysis = useMemo(() => analyzeStreamingTracks(tracks), [tracks]);
   const radio = useMemo(() => buildPlaylistRadio(tracks), [tracks]);
   const radioSeedText = useMemo(() => radioToSeedText(radio, 50), [radio]);
-  const mixedSeeds = useMemo(() => {
-    const recs = analysis.flatMap((group) => group.recommendations).slice(0, 10);
-    return tracksToSeedText([...tracks.slice(0, 14), ...recs], 24);
-  }, [analysis, tracks]);
 
   async function connectSpotify() {
     if (!clientId.trim()) {
@@ -149,7 +143,6 @@ export function StreamingSourcesPanel({
       const items = await fetchSpotifyPlaylistTracks(id, accessToken);
       const text = tracksToSeedText(items, 80);
       setPasteText(text);
-      onUseSeeds(text);
       setStatus(`${items.length.toLocaleString()} Spotify tracks loaded`);
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Could not load playlist");
@@ -221,13 +214,16 @@ export function StreamingSourcesPanel({
             ))}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-uv-text-muted">
+            {tracks.length} track{tracks.length === 1 ? "" : "s"}
+          </span>
           <button
             type="button"
-            onClick={() => onBuild(mixedSeeds)}
+            onClick={() => onBuild(pasteText)}
             className="rounded-md border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-3 py-2 text-sm font-semibold text-uhchi-teal-bright transition hover:bg-uhchi-secondary/20"
           >
-            Generate mix
+            Generate tree
           </button>
         </div>
       </div>
@@ -382,13 +378,6 @@ export function StreamingSourcesPanel({
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => onUseSeeds(radioSeedText)}
-                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
-                >
-                  Use radio seeds
-                </button>
                 <button
                   type="button"
                   onClick={() => onBuild(radioSeedText)}
