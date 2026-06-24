@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { buildPlaylistRadio, radioToSeedText } from "@/lib/playlistRadio";
 import {
   analyzeStreamingTracks,
   completeSpotifyLoginFromUrl,
@@ -19,6 +20,14 @@ import {
   type SpotifyPlaylist,
   type StreamingTrack,
 } from "@/lib/streaming";
+import {
+  configuredYouTubeClientId,
+  createYouTubeRadioPlaylist,
+  preloadYouTubeIdentity,
+  storeYouTubeClientId,
+  type YouTubeExportResult,
+} from "@/lib/youtube";
+import { motifForGenre } from "@/lib/genreMotifs";
 
 const STARTER_ROTATION =
   "New Order - Ceremony\nThe Cure - Plainsong\nMetallica - Nothing Else Matters\nFred again.. - Delilah\nBicep - Glue\nKurt Vile - Pretty Pimpin\nGrouper - Heavy Water/I'd Rather Be Sleeping\nMF DOOM - Doomsday\nFontaines D.C. - Starburster\nBig Thief - Simulation Swarm";
@@ -54,10 +63,18 @@ export function StreamingSourcesPanel({
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [youtubeClientId, setYouTubeClientId] = useState("");
+  const [youtubeTitle, setYouTubeTitle] = useState("Ultraviolet Unique-Seed Radio");
+  const [youtubePrivacy, setYouTubePrivacy] = useState<"private" | "unlisted" | "public">("unlisted");
+  const [youtubeLimit, setYouTubeLimit] = useState(24);
+  const [youtubeStatus, setYouTubeStatus] = useState<string | null>(null);
+  const [youtubeResult, setYouTubeResult] = useState<YouTubeExportResult | null>(null);
+  const [youtubeLoading, setYouTubeLoading] = useState(false);
 
   useEffect(() => {
     const id = configuredSpotifyClientId();
     setClientId(id);
+    setYouTubeClientId(configuredYouTubeClientId());
     const finish = async () => {
       if (!id) return;
       try {
@@ -74,6 +91,8 @@ export function StreamingSourcesPanel({
 
   const tracks = useMemo(() => parseTrackLines(pasteText), [pasteText]);
   const analysis = useMemo(() => analyzeStreamingTracks(tracks), [tracks]);
+  const radio = useMemo(() => buildPlaylistRadio(tracks), [tracks]);
+  const radioSeedText = useMemo(() => radioToSeedText(radio, 50), [radio]);
   const mixedSeeds = useMemo(() => {
     const recs = analysis.flatMap((group) => group.recommendations).slice(0, 10);
     return tracksToSeedText([...tracks.slice(0, 14), ...recs], 24);
@@ -121,6 +140,37 @@ export function StreamingSourcesPanel({
       setStatus(err instanceof Error ? err.message : "Could not load playlist");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function createYouTubePlaylist() {
+    if (!youtubeClientId.trim()) {
+      setYouTubeStatus("Add a YouTube Client ID");
+      return;
+    }
+    const exportTracks = radio.tracks.slice(0, youtubeLimit);
+    if (!exportTracks.length) {
+      setYouTubeStatus("Generate a radio sequence first");
+      return;
+    }
+    storeYouTubeClientId(youtubeClientId);
+    setYouTubeLoading(true);
+    setYouTubeResult(null);
+    setYouTubeStatus("Waiting for Google consent");
+    try {
+      const result = await createYouTubeRadioPlaylist({
+        clientId: youtubeClientId.trim(),
+        title: youtubeTitle.trim() || "Ultraviolet Unique-Seed Radio",
+        privacyStatus: youtubePrivacy,
+        tracks: exportTracks,
+        onProgress: setYouTubeStatus,
+      });
+      setYouTubeResult(result);
+      setYouTubeStatus(`Created ${result.inserted.length}/${exportTracks.length} YouTube tracks`);
+    } catch (err) {
+      setYouTubeStatus(err instanceof Error ? err.message : "YouTube export failed");
+    } finally {
+      setYouTubeLoading(false);
     }
   }
 
@@ -246,6 +296,146 @@ export function StreamingSourcesPanel({
               </div>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {radio.tracks.length ? (
+        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_370px]">
+          <section className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-display text-lg font-semibold text-uv-text-primary">Playlist radio</h3>
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
+                  Unique-seed sequence
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onUseSeeds(radioSeedText)}
+                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
+                >
+                  Use radio seeds
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onBuild(radioSeedText)}
+                  className="rounded-md border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-3 py-2 text-xs font-semibold text-uhchi-teal-bright transition hover:bg-uhchi-secondary/20"
+                >
+                  Build radio tree
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
+              <div className="rounded-lg border border-uv-border bg-uv-bg-elevated/70 p-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
+                  Unique seeds
+                </p>
+                <div className="mt-2 space-y-2">
+                  {radio.uniqueSeeds.slice(0, 5).map((track) => {
+                    const motif = motifForGenre(track.genre);
+                    return (
+                      <div key={`${track.artist}-${track.title}`} className="min-w-0">
+                        <p className="truncate text-sm font-medium text-uv-text-primary">{track.title}</p>
+                        <p className="truncate text-xs text-uv-text-muted">{track.artist}</p>
+                        <p
+                          className="mt-1 inline-flex rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em]"
+                          style={{ borderColor: motif.primary, color: motif.primary }}
+                        >
+                          {track.genre} / {Math.round(track.uniqueness * 100)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid max-h-72 gap-2 overflow-auto pr-1 sm:grid-cols-2">
+                {radio.tracks.slice(0, 16).map((track, index) => {
+                  const motif = motifForGenre(track.genre);
+                  return (
+                    <div
+                      key={`${track.role}-${track.artist}-${track.title}-${index}`}
+                      className="rounded-lg border border-uv-border bg-uv-bg-elevated/55 p-3"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span
+                          className="mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-md border font-mono text-[10px]"
+                          style={{ borderColor: motif.primary, color: motif.primary }}
+                        >
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-uv-text-primary">{track.title}</p>
+                          <p className="truncate text-xs text-uv-text-muted">{track.artist}</p>
+                          <p className="mt-1 truncate text-[11px] capitalize text-uv-text-secondary">
+                            {track.role}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <aside className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
+            <h3 className="font-display text-lg font-semibold text-uv-text-primary">YouTube export</h3>
+            <div className="mt-3 space-y-2">
+              <input
+                value={youtubeClientId}
+                onChange={(e) => setYouTubeClientId(e.target.value)}
+                onFocus={preloadYouTubeIdentity}
+                placeholder="YouTube OAuth Client ID"
+                className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
+              />
+              <input
+                value={youtubeTitle}
+                onChange={(e) => setYouTubeTitle(e.target.value)}
+                className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
+              />
+              <div className="grid grid-cols-[1fr_84px] gap-2">
+                <select
+                  value={youtubePrivacy}
+                  onChange={(e) => setYouTubePrivacy(e.target.value as "private" | "unlisted" | "public")}
+                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
+                >
+                  <option value="private">Private</option>
+                  <option value="unlisted">Unlisted</option>
+                  <option value="public">Public</option>
+                </select>
+                <input
+                  type="number"
+                  min={8}
+                  max={30}
+                  value={youtubeLimit}
+                  onChange={(e) => setYouTubeLimit(Math.min(30, Math.max(8, Number(e.target.value))))}
+                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={createYouTubePlaylist}
+                disabled={youtubeLoading}
+                className="w-full rounded-md border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-3 py-2 text-xs font-semibold text-uhchi-teal-bright transition hover:bg-uhchi-secondary/20 disabled:opacity-50"
+              >
+                {youtubeLoading ? "Creating..." : "Create on YouTube"}
+              </button>
+              {youtubeStatus ? <p className="text-xs text-uv-text-secondary">{youtubeStatus}</p> : null}
+              {youtubeResult ? (
+                <a
+                  href={youtubeResult.playlistUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
+                >
+                  Open YouTube playlist
+                </a>
+              ) : null}
+            </div>
+          </aside>
         </div>
       ) : null}
     </section>
