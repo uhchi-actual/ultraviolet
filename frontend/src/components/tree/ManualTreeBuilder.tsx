@@ -5,7 +5,10 @@ import { useState } from "react";
 import { buildManualTree } from "@/lib/api";
 import type { TreeGraph } from "@/lib/types";
 
-function parseSongs(text: string): { title: string; artist: string }[] {
+export const DEFAULT_ROTATION_SEEDS =
+  "New Order - Ceremony\nThe Cure - Plainsong\nDepeche Mode - Enjoy the Silence\nFred again.. - Delilah\nKurt Vile - Pretty Pimpin";
+
+export function parseSongs(text: string): { title: string; artist: string }[] {
   return text
     .split("\n")
     .map((line) => line.trim())
@@ -14,10 +17,8 @@ function parseSongs(text: string): { title: string; artist: string }[] {
     .map((line) => {
       const byDash = line.match(/^(.+?)\s+[-\u2013\u2014]\s+(.+)$/);
       if (byDash) return { artist: byDash[1]!.trim(), title: byDash[2]!.trim() };
-      const by = line.match(/^(.+?)\s+[-–—]\s+(.+)$/);
-      if (by) return { artist: by[1].trim(), title: by[2].trim() };
-      const by2 = line.match(/^(.+?)\s+by\s+(.+)$/i);
-      if (by2) return { title: by2[1].trim(), artist: by2[2].trim() };
+      const by = line.match(/^(.+?)\s+by\s+(.+)$/i);
+      if (by) return { title: by[1]!.trim(), artist: by[2]!.trim() };
       return { title: line, artist: "" };
     });
 }
@@ -25,16 +26,24 @@ function parseSongs(text: string): { title: string; artist: string }[] {
 export function ManualTreeBuilder({
   onBuilt,
   onError,
+  seedText,
+  onSeedTextChange,
 }: {
   onBuilt: (graph: TreeGraph) => void;
   onError?: (msg: string) => void;
+  seedText?: string;
+  onSeedTextChange?: (text: string) => void;
 }) {
-  const [text, setText] = useState(
-    "New Order - Ceremony\nThe Cure - Plainsong\nDepeche Mode - Enjoy the Silence\nFred again.. - Delilah\nKurt Vile - Pretty Pimpin",
-  );
+  const [internalText, setInternalText] = useState(DEFAULT_ROTATION_SEEDS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recsPerSeed, setRecsPerSeed] = useState(12);
+  const text = seedText ?? internalText;
+
+  function updateText(value: string) {
+    if (seedText != null) onSeedTextChange?.(value);
+    else setInternalText(value);
+  }
 
   async function handleBuild() {
     const songs = parseSongs(text);
@@ -64,13 +73,13 @@ export function ManualTreeBuilder({
         My rotation
       </h3>
       <p className="mt-2 text-sm text-uv-text-secondary">
-        Type up to <strong className="text-uv-text-primary">50 songs</strong> — one per line. Format:{" "}
-        <code className="text-uv-text-primary">Artist - Title</code>. Any song works — we match FMA when
-        possible, otherwise taste prototypes. No upload or account needed.
+        Type up to <strong className="text-uv-text-primary">50 songs</strong> - one per line. Format:{" "}
+        <code className="text-uv-text-primary">Artist - Title</code>. The tree uses local genre, bridge,
+        and diversity agents with streaming search links. No upload or account needed.
       </p>
       <textarea
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => updateText(e.target.value)}
         rows={6}
         className="mt-3 w-full rounded-lg border border-uv-border bg-uv-bg-elevated px-3 py-2 font-mono text-sm text-uv-text-primary"
         placeholder={"Chris Stussy - Darkness\nNew Order - Ceremony\nThe Cure - Plainsong"}
@@ -87,14 +96,16 @@ export function ManualTreeBuilder({
             className="ml-1 w-14 rounded border border-uv-border bg-uv-bg-elevated px-2 py-1 text-uv-text-primary"
           />
         </label>
-        <span className="text-xs text-uv-text-muted">{count} song{count === 1 ? "" : "s"}</span>
+        <span className="text-xs text-uv-text-muted">
+          {count} song{count === 1 ? "" : "s"}
+        </span>
         <button
           type="button"
           disabled={loading}
           onClick={handleBuild}
           className="rounded-lg border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-4 py-2 text-sm font-semibold text-uhchi-teal-bright hover:bg-uhchi-secondary/20 disabled:opacity-50"
         >
-          {loading ? "Building tree…" : "Generate tree"}
+          {loading ? "Building tree..." : "Generate tree"}
         </button>
       </div>
       {error ? <p className="mt-3 text-sm text-uhchi-red-bright">{error}</p> : null}

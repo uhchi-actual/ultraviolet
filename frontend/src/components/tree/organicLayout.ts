@@ -54,20 +54,20 @@ export function computeOrganicLayout(
   const rand = mulberry32(seed);
 
   const cx = width * 0.5;
-  const cy = height * 0.38;
+  const cy = height * 0.48;
   const seeds = graph.nodes.filter((n) => n.type === "seed");
   const childrenOf = buildChildrenMap(graph.edges);
   const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
   const positions = new Map<string, LayoutPos>();
 
   // Seed supercluster — tight nucleus with slight scatter
-  const seedSpread = Math.min(280, width / (seeds.length + 2));
+  const seedSpread = seeds.length <= 1 ? 0 : Math.min(820, 360 + seeds.length * 80);
   seeds.forEach((seedNode, i) => {
-    const angle = (i / Math.max(1, seeds.length)) * Math.PI * 2 + rand() * 0.4;
-    const r = seedSpread * (0.35 + rand() * 0.25);
+    const angle = (i / Math.max(1, seeds.length)) * Math.PI * 2 - Math.PI / 2 + rand() * 0.2;
+    const r = seeds.length <= 1 ? 0 : seedSpread * (0.74 + rand() * 0.16);
     positions.set(seedNode.id, {
       x: cx + Math.cos(angle) * r,
-      y: cy + Math.sin(angle) * r * 0.35,
+      y: cy + Math.sin(angle) * r * 0.58,
     });
   });
 
@@ -79,9 +79,9 @@ export function computeOrganicLayout(
     if (!parent || !kids.length) return;
 
     const baseAngle = Math.atan2(parent.y - cy, parent.x - cx);
-    const spread = Math.min(Math.PI * 0.85, 0.45 + kids.length * 0.12);
+    const spread = Math.min(Math.PI * 0.95, 0.62 + kids.length * 0.13);
     const step = kids.length > 1 ? spread / (kids.length - 1) : 0;
-    const armLen = 140 + depth * 95 + rand() * 60;
+    const armLen = 210 + depth * 135 + rand() * 90;
 
     kids.forEach((kidId, idx) => {
       if (visited.has(kidId)) return;
@@ -91,7 +91,7 @@ export function computeOrganicLayout(
       const dist = armLen * (0.85 + rand() * 0.3);
       positions.set(kidId, {
         x: parent.x + Math.cos(angle) * dist,
-        y: parent.y + Math.sin(angle) * dist + depth * 25,
+        y: parent.y + Math.sin(angle) * dist + depth * 36,
       });
       placeFilament(kidId, depth + 1);
     });
@@ -124,12 +124,12 @@ export function computeOrganicLayout(
     }));
 
   const sim = forceSimulation(simNodes)
-    .force("link", forceLink(links).id((d) => (d as TreeSimNode).id).distance(120).strength(0.15))
-    .force("charge", forceManyBody().strength(-400))
-    .force("collide", forceCollide(72))
+    .force("link", forceLink(links).id((d) => (d as TreeSimNode).id).distance(185).strength(0.08))
+    .force("charge", forceManyBody().strength(-720))
+    .force("collide", forceCollide(104))
     .stop();
 
-  for (let i = 0; i < 120; i++) sim.tick();
+  for (let i = 0; i < 150; i++) sim.tick();
 
   const final = new Map<string, LayoutPos>();
   for (const n of simNodes) {
@@ -150,7 +150,7 @@ export function constellationPath(
   const nx = -dy / dist;
   const ny = dx / dist;
   const h = hashSeed(edgeKey) % 1000;
-  const bend = ((h / 1000) * 2 - 1) * dist * 0.06;
+  const bend = ((h / 1000) * 2 - 1) * dist * 0.1;
   const mx = (from.x + to.x) / 2 + nx * bend;
   const my = (from.y + to.y) / 2 + ny * bend;
   return `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`;

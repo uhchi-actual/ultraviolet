@@ -1,0 +1,437 @@
+import { allGenreMotifs, motifForGenre } from "./genreMotifs";
+
+export interface StreamingTrack {
+  title: string;
+  artist: string;
+  album?: string;
+  source?: "paste" | "spotify" | "curated";
+  url?: string;
+}
+
+export interface DiscoveryTrack extends StreamingTrack {
+  genre: string;
+  why: string;
+}
+
+export interface GenreAnalysis {
+  genre: string;
+  mood: string;
+  count: number;
+  tracks: StreamingTrack[];
+  recommendations: DiscoveryTrack[];
+}
+
+export interface SpotifyPlaylist {
+  id: string;
+  name: string;
+  tracksTotal: number;
+}
+
+const SPOTIFY_CLIENT_ID_KEY = "ultraviolet_spotify_client_id";
+const SPOTIFY_TOKEN_KEY = "ultraviolet_spotify_token";
+const SPOTIFY_VERIFIER_KEY = "ultraviolet_spotify_code_verifier";
+const SPOTIFY_STATE_KEY = "ultraviolet_spotify_state";
+const SPOTIFY_SCOPES = "playlist-read-private playlist-read-collaborative user-read-private";
+
+export const DISCOVERY_CATALOG: DiscoveryTrack[] = [
+  { artist: "Bauhaus", title: "Dark Entries", genre: "Rock", why: "angular post-punk pressure", source: "curated" },
+  { artist: "The Chameleons", title: "Swamp Thing", genre: "Rock", why: "wide-screen melancholy guitar", source: "curated" },
+  { artist: "Fontaines D.C.", title: "Starburster", genre: "Rock", why: "tense vocal rhythm and grit", source: "curated" },
+  { artist: "Molchat Doma", title: "Sudno", genre: "Rock", why: "coldwave pulse and gloom", source: "curated" },
+  { artist: "Drab Majesty", title: "Ellipsis", genre: "Rock", why: "glossy gothic synth-rock", source: "curated" },
+  { artist: "Boy Harsher", title: "Pain", genre: "Rock", why: "minimal dark club dread", source: "curated" },
+  { artist: "IDLES", title: "Never Fight a Man With a Perm", genre: "Rock", why: "red-line angry momentum", source: "curated" },
+  { artist: "Viagra Boys", title: "Sports", genre: "Rock", why: "sardonic motorik swagger", source: "curated" },
+  { artist: "METZ", title: "A Boat to Drown In", genre: "Rock", why: "abrasive release valve", source: "curated" },
+  { artist: "Joy Division", title: "Disorder", genre: "Rock", why: "nervous post-punk ignition", source: "curated" },
+  { artist: "The Cure", title: "A Forest", genre: "Rock", why: "shadowy guitar hypnosis", source: "curated" },
+  { artist: "New Order", title: "Age of Consent", genre: "Rock", why: "bright bassline ache", source: "curated" },
+  { artist: "Depeche Mode", title: "Enjoy the Silence", genre: "Rock", why: "dark synth-pop gravity", source: "curated" },
+  { artist: "Protomartyr", title: "Pontiac 87", genre: "Rock", why: "dry dread and momentum", source: "curated" },
+  { artist: "The Armed", title: "All Futures", genre: "Rock", why: "maximalist guitar detonation", source: "curated" },
+  { artist: "Turnstile", title: "Holiday", genre: "Rock", why: "hardcore joy burst", source: "curated" },
+  { artist: "Sonic Youth", title: "Teen Age Riot", genre: "Rock", why: "tangled guitar release", source: "curated" },
+  { artist: "The Strokes", title: "Reptilia", genre: "Rock", why: "tight city-guitar bite", source: "curated" },
+  { artist: "Queens of the Stone Age", title: "Go With the Flow", genre: "Rock", why: "desert-rock drive", source: "curated" },
+
+  { artist: "Bicep", title: "Glue", genre: "Electronic", why: "big emotional rave lift", source: "curated" },
+  { artist: "Overmono", title: "So U Kno", genre: "Electronic", why: "rubbery UK club swing", source: "curated" },
+  { artist: "Floating Points", title: "Birth4000", genre: "Electronic", why: "patient synth bloom", source: "curated" },
+  { artist: "Four Tet", title: "Two Thousand and Seventeen", genre: "Electronic", why: "soft melodic electronics", source: "curated" },
+  { artist: "Burial", title: "Archangel", genre: "Electronic", why: "blue-lit garage melancholy", source: "curated" },
+  { artist: "DJ Seinfeld", title: "U", genre: "Electronic", why: "dusty house ache", source: "curated" },
+  { artist: "Mall Grab", title: "Pool Party Music", genre: "Electronic", why: "loose house momentum", source: "curated" },
+  { artist: "Chris Stussy", title: "All Night Long", genre: "Electronic", why: "sleek rolling house", source: "curated" },
+  { artist: "Caribou", title: "Can't Do Without You", genre: "Electronic", why: "warm loop hypnosis", source: "curated" },
+  { artist: "Aphex Twin", title: "Xtal", genre: "Electronic", why: "glass-soft early IDM", source: "curated" },
+  { artist: "Boards of Canada", title: "Roygbiv", genre: "Electronic", why: "sun-warped nostalgia", source: "curated" },
+  { artist: "Daft Punk", title: "Digital Love", genre: "Electronic", why: "sleek French-touch lift", source: "curated" },
+  { artist: "Jamie xx", title: "Gosh", genre: "Electronic", why: "slow-bloom club pressure", source: "curated" },
+  { artist: "LCD Soundsystem", title: "Dance Yrself Clean", genre: "Electronic", why: "patient dance-rock payoff", source: "curated" },
+  { artist: "Orbital", title: "Halcyon On and On", genre: "Electronic", why: "weightless rave memory", source: "curated" },
+  { artist: "The Chemical Brothers", title: "Star Guitar", genre: "Electronic", why: "motorik big-beat shimmer", source: "curated" },
+  { artist: "SOPHIE", title: "Immaterial", genre: "Electronic", why: "hyper-pop chrome bounce", source: "curated" },
+  { artist: "Nicolas Jaar", title: "Space Is Only Noise", genre: "Electronic", why: "minimal late-night pulse", source: "curated" },
+  { artist: "Underworld", title: "Born Slippy .NUXX", genre: "Electronic", why: "anthemic warehouse rush", source: "curated" },
+  { artist: "Jon Hopkins", title: "Open Eye Signal", genre: "Electronic", why: "precision techno ascent", source: "curated" },
+  { artist: "Kelly Lee Owens", title: "Melt!", genre: "Electronic", why: "icy techno-pop glide", source: "curated" },
+  { artist: "Peggy Gou", title: "It Makes You Forget (Itgehane)", genre: "Electronic", why: "breezy house release", source: "curated" },
+
+  { artist: "Kurt Vile", title: "Pretty Pimpin", genre: "Pop", why: "slacker guitar daylight", source: "curated" },
+  { artist: "Yo La Tengo", title: "Autumn Sweater", genre: "Pop", why: "hushed indie repetition", source: "curated" },
+  { artist: "Alvvays", title: "Belinda Says", genre: "Pop", why: "bright fuzz-pop rush", source: "curated" },
+  { artist: "Beach House", title: "Space Song", genre: "Pop", why: "dream-pop drift", source: "curated" },
+  { artist: "Japanese Breakfast", title: "Be Sweet", genre: "Pop", why: "glossy indie-pop motion", source: "curated" },
+  { artist: "Weyes Blood", title: "Andromeda", genre: "Pop", why: "cosmic soft-rock longing", source: "curated" },
+  { artist: "Caroline Polachek", title: "Bunny Is a Rider", genre: "Pop", why: "nimble art-pop hook", source: "curated" },
+  { artist: "Charli XCX", title: "360", genre: "Pop", why: "compressed club-pop flash", source: "curated" },
+  { artist: "Tame Impala", title: "Let It Happen", genre: "Pop", why: "psychedelic pop sprawl", source: "curated" },
+  { artist: "Phoenix", title: "1901", genre: "Pop", why: "sleek festival bounce", source: "curated" },
+  { artist: "The xx", title: "Crystalised", genre: "Pop", why: "minimal nocturnal tension", source: "curated" },
+  { artist: "M83", title: "Midnight City", genre: "Pop", why: "neon widescreen lift", source: "curated" },
+  { artist: "Mitski", title: "Washing Machine Heart", genre: "Pop", why: "compact emotional hook", source: "curated" },
+  { artist: "Lana Del Rey", title: "Venice Bitch", genre: "Pop", why: "sunset psych-pop drift", source: "curated" },
+
+  { artist: "Big Thief", title: "Simulation Swarm", genre: "Folk", why: "tender folk-rock detail", source: "curated" },
+  { artist: "Adrianne Lenker", title: "anything", genre: "Folk", why: "close-mic ache", source: "curated" },
+  { artist: "Sufjan Stevens", title: "Should Have Known Better", genre: "Folk", why: "soft grief into lift", source: "curated" },
+  { artist: "Nick Drake", title: "Pink Moon", genre: "Folk", why: "bare autumn intimacy", source: "curated" },
+  { artist: "Fleet Foxes", title: "Blue Ridge Mountains", genre: "Folk", why: "stacked pastoral harmony", source: "curated" },
+  { artist: "Bon Iver", title: "Holocene", genre: "Folk", why: "frosted folk expanse", source: "curated" },
+  { artist: "Joanna Newsom", title: "Sprout and the Bean", genre: "Folk", why: "strange harp-lit fable", source: "curated" },
+  { artist: "Phoebe Bridgers", title: "Kyoto", genre: "Folk", why: "restless indie-folk release", source: "curated" },
+  { artist: "Waxahatchee", title: "Fire", genre: "Folk", why: "plainspoken roots glow", source: "curated" },
+  { artist: "MJ Lenderman", title: "You Don't Know The Shape I'm In", genre: "Folk", why: "loose alt-country ache", source: "curated" },
+  { artist: "Hurray for the Riff Raff", title: "Alibi", genre: "Folk", why: "dusty folk-rock pulse", source: "curated" },
+  { artist: "Gillian Welch", title: "Look at Miss Ohio", genre: "Folk", why: "weathered country folk", source: "curated" },
+  { artist: "Alex G", title: "Sarah", genre: "Folk", why: "homespun indie unease", source: "curated" },
+
+  { artist: "Grouper", title: "Heavy Water/I'd Rather Be Sleeping", genre: "Instrumental", why: "blue ambient sadness", source: "curated" },
+  { artist: "Brian Eno", title: "An Ending (Ascent)", genre: "Instrumental", why: "weightless ambient blue", source: "curated" },
+  { artist: "Tim Hecker", title: "Virginal II", genre: "Instrumental", why: "beautiful distortion cloud", source: "curated" },
+  { artist: "Stars of the Lid", title: "Requiem for Dying Mothers Part 2", genre: "Instrumental", why: "slow celestial grief", source: "curated" },
+  { artist: "William Basinski", title: "dlp 1.1", genre: "Instrumental", why: "decaying tape memory", source: "curated" },
+  { artist: "Explosions in the Sky", title: "Your Hand in Mine", genre: "Instrumental", why: "post-rock catharsis", source: "curated" },
+  { artist: "Godspeed You! Black Emperor", title: "Moya", genre: "Instrumental", why: "storm-cloud crescendo", source: "curated" },
+  { artist: "Max Richter", title: "On the Nature of Daylight", genre: "Instrumental", why: "cinematic string sorrow", source: "curated" },
+  { artist: "Nils Frahm", title: "Says", genre: "Instrumental", why: "piano-synth patience", source: "curated" },
+  { artist: "A Winged Victory for the Sullen", title: "Steep Hills of Vicodin Tears", genre: "Instrumental", why: "orchestral ambient hush", source: "curated" },
+  { artist: "Julianna Barwick", title: "The Magic Place", genre: "Instrumental", why: "vocal ambient shimmer", source: "curated" },
+  { artist: "Ryuichi Sakamoto", title: "Merry Christmas Mr. Lawrence", genre: "Instrumental", why: "elegant piano ache", source: "curated" },
+  { artist: "Hania Rani", title: "Glass", genre: "Instrumental", why: "modern piano pulse", source: "curated" },
+  { artist: "Oneohtrix Point Never", title: "Chrome Country", genre: "Instrumental", why: "synthetic sunset wash", source: "curated" },
+
+  { artist: "J Dilla", title: "Time: The Donut of the Heart", genre: "Hip-Hop", why: "warm chopped soul", source: "curated" },
+  { artist: "MF DOOM", title: "Doomsday", genre: "Hip-Hop", why: "laid-back lyrical oddity", source: "curated" },
+  { artist: "A Tribe Called Quest", title: "Electric Relaxation", genre: "Hip-Hop", why: "low-slung jazz pocket", source: "curated" },
+  { artist: "Nujabes", title: "Feather", genre: "Hip-Hop", why: "jazz-rap float", source: "curated" },
+  { artist: "Kendrick Lamar", title: "Alright", genre: "Hip-Hop", why: "anthemic pressure valve", source: "curated" },
+  { artist: "Aesop Rock", title: "None Shall Pass", genre: "Hip-Hop", why: "dense abstract sprint", source: "curated" },
+  { artist: "OutKast", title: "SpottieOttieDopaliscious", genre: "Hip-Hop", why: "horn-led southern cool", source: "curated" },
+  { artist: "Tyler, The Creator", title: "See You Again", genre: "Hip-Hop", why: "pastel rap-pop swing", source: "curated" },
+  { artist: "Little Simz", title: "Introvert", genre: "Hip-Hop", why: "orchestral self-interrogation", source: "curated" },
+  { artist: "Run The Jewels", title: "Close Your Eyes (And Count to Fuck)", genre: "Hip-Hop", why: "combustive rap attack", source: "curated" },
+  { artist: "JPEGMAFIA", title: "BALD!", genre: "Hip-Hop", why: "glitchy punk-rap charge", source: "curated" },
+  { artist: "Madlib", title: "Slim's Return", genre: "Hip-Hop", why: "dusty jazz-loop strut", source: "curated" },
+  { artist: "De La Soul", title: "Eye Know", genre: "Hip-Hop", why: "sunny sample collage", source: "curated" },
+  { artist: "Gang Starr", title: "Moment of Truth", genre: "Hip-Hop", why: "classic boom-bap poise", source: "curated" },
+  { artist: "The Roots", title: "You Got Me", genre: "Hip-Hop", why: "live-band soul gravity", source: "curated" },
+  { artist: "Danny Brown", title: "Ain't It Funny", genre: "Hip-Hop", why: "chaotic blown-speaker mania", source: "curated" },
+
+  { artist: "Tinariwen", title: "Sastanaqqam", genre: "International", why: "desert blues trance", source: "curated" },
+  { artist: "Altin Gun", title: "Goca Dunya", genre: "International", why: "psych-folk groove", source: "curated" },
+  { artist: "Mdou Moctar", title: "Afrique Victime", genre: "International", why: "high-voltage guitar spiral", source: "curated" },
+  { artist: "Fela Kuti", title: "Water No Get Enemy", genre: "International", why: "extended afrobeat roll", source: "curated" },
+  { artist: "Ali Farka Toure", title: "Ai Du", genre: "International", why: "patient desert guitar", source: "curated" },
+  { artist: "Ebo Taylor", title: "Heaven", genre: "International", why: "golden highlife groove", source: "curated" },
+  { artist: "William Onyeabor", title: "Fantastic Man", genre: "International", why: "cosmic synth-funk joy", source: "curated" },
+  { artist: "Cesaria Evora", title: "Sodade", genre: "International", why: "morne-blue longing", source: "curated" },
+  { artist: "Buena Vista Social Club", title: "Chan Chan", genre: "International", why: "warm Cuban sway", source: "curated" },
+  { artist: "Rosalia", title: "Malamente", genre: "International", why: "flamenco-pop snap", source: "curated" },
+  { artist: "Bomba Estereo", title: "Soy Yo", genre: "International", why: "bright cumbia-pop bounce", source: "curated" },
+  { artist: "Shintaro Sakamoto", title: "You Just Decided", genre: "International", why: "weightless Japanese groove", source: "curated" },
+  { artist: "Kikagaku Moyo", title: "Dripping Sun", genre: "International", why: "Japanese psych-guitar bloom", source: "curated" },
+  { artist: "Khruangbin", title: "Time (You and I)", genre: "International", why: "global funk glide", source: "curated" },
+  { artist: "Yussef Dayes", title: "Black Classical Music", genre: "International", why: "London jazz momentum", source: "curated" },
+
+  { artist: "Arca", title: "Desafio", genre: "Experimental", why: "mutating club melodrama", source: "curated" },
+  { artist: "Bjork", title: "Hyperballad", genre: "Experimental", why: "ecstatic art-pop vertigo", source: "curated" },
+  { artist: "Animal Collective", title: "My Girls", genre: "Experimental", why: "communal psych-pop bloom", source: "curated" },
+  { artist: "Swans", title: "Screen Shot", genre: "Experimental", why: "ritual noise-rock churn", source: "curated" },
+  { artist: "Xiu Xiu", title: "Sad Pony Guerilla Girl", genre: "Experimental", why: "raw brittle confession", source: "curated" },
+  { artist: "FKA twigs", title: "Cellophane", genre: "Experimental", why: "fragile futuristic ballad", source: "curated" },
+  { artist: "Oneohtrix Point Never", title: "Replica", genre: "Experimental", why: "sampled-memory collage", source: "curated" },
+  { artist: "Yves Tumor", title: "Gospel For a New Century", genre: "Experimental", why: "glam chaos and swagger", source: "curated" },
+  { artist: "black midi", title: "John L", genre: "Experimental", why: "jagged math-rock spiral", source: "curated" },
+  { artist: "clipping.", title: "Say the Name", genre: "Experimental", why: "industrial rap unease", source: "curated" },
+  { artist: "Dean Blunt", title: "The Narcissist", genre: "Experimental", why: "foggy outsider soul", source: "curated" },
+  { artist: "Cocteau Twins", title: "Cherry-coloured Funk", genre: "Experimental", why: "glossolalia dream shimmer", source: "curated" },
+  { artist: "CAN", title: "Halleluwah", genre: "Experimental", why: "locked-in krautrock ritual", source: "curated" },
+  { artist: "Broadcast", title: "Come On Let's Go", genre: "Experimental", why: "retro-futurist pop flicker", source: "curated" },
+  { artist: "Portishead", title: "Roads", genre: "Experimental", why: "noir trip-hop despair", source: "curated" },
+];
+
+function clean(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function dedupeKey(track: StreamingTrack): string {
+  return `${track.artist}|${track.title}`.toLowerCase();
+}
+
+function hash(value: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+export function parseTrackLines(text: string, source: StreamingTrack["source"] = "paste"): StreamingTrack[] {
+  const seen = new Set<string>();
+  const tracks: StreamingTrack[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = clean(raw);
+    if (!line) continue;
+    const csv = line.split(",").map(clean);
+    const byDash = line.match(/^(.+?)\s+[-\u2013\u2014]\s+(.+)$/);
+    const byBy = line.match(/^(.+?)\s+by\s+(.+)$/i);
+    let track: StreamingTrack | null = null;
+    if (byDash) track = { artist: byDash[1]!, title: byDash[2]!, source };
+    else if (byBy) track = { title: byBy[1]!, artist: byBy[2]!, source };
+    else if (csv.length >= 2) track = { title: csv[0]!, artist: csv[1]!, album: csv[2], source };
+    if (!track) continue;
+    track.artist = clean(track.artist);
+    track.title = clean(track.title);
+    const key = dedupeKey(track);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tracks.push(track);
+  }
+  return tracks.slice(0, 250);
+}
+
+export function inferStreamingGenre(track: StreamingTrack): string {
+  const q = `${track.artist} ${track.title} ${track.album ?? ""}`.toLowerCase();
+  if (/hip.?hop|rap|dilla|doom|tribe|nujabes|kendrick|jpegmafia|madvillain/.test(q)) return "Hip-Hop";
+  if (/ambient|eno|grouper|basinski|hecker|stars of the lid|instrumental|drone/.test(q)) {
+    return "Instrumental";
+  }
+  if (/house|techno|burial|bicep|overmono|four tet|floating points|caribou|stussy|fred again|aphex|boards|electronic|dj /.test(q)) {
+    return "Electronic";
+  }
+  if (/folk|sufjan|big thief|adrianne|americana|lenker|elliott smith/.test(q)) return "Folk";
+  if (/tinariwen|altin|mdou|fela|brazil|afro|latin|klezmer/.test(q)) return "International";
+  if (/idles|metz|viagra boys|bauhaus|cure|joy division|new order|depeche|fontaines|molchat|rock|punk|metal|goth|darkwave/.test(q)) {
+    return "Rock";
+  }
+  return "Pop";
+}
+
+export function analyzeStreamingTracks(tracks: StreamingTrack[]): GenreAnalysis[] {
+  const groups = new Map<string, StreamingTrack[]>();
+  for (const track of tracks) {
+    const genre = inferStreamingGenre(track);
+    groups.set(genre, [...(groups.get(genre) ?? []), track]);
+  }
+
+  return [...groups.entries()]
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([genre, genreTracks]) => {
+      const motif = motifForGenre(genre);
+      const existing = new Set(genreTracks.map(dedupeKey));
+      const seed = hash(genreTracks.map(dedupeKey).join("|") || genre);
+      const recommendations = DISCOVERY_CATALOG.filter(
+        (track) => track.genre === genre && !existing.has(dedupeKey(track)),
+      )
+        .sort((a, b) => ((hash(dedupeKey(a)) ^ seed) >>> 0) - ((hash(dedupeKey(b)) ^ seed) >>> 0))
+        .slice(0, 8);
+      return {
+        genre,
+        mood: motif.mood,
+        count: genreTracks.length,
+        tracks: genreTracks,
+        recommendations,
+      };
+    });
+}
+
+export function tracksToSeedText(tracks: StreamingTrack[], limit = 50): string {
+  return tracks
+    .slice(0, limit)
+    .map((track) => `${track.artist} - ${track.title}`)
+    .join("\n");
+}
+
+export function providerSearchUrl(track: StreamingTrack, provider: "spotify" | "youtube" | "soundcloud"): string {
+  const query = encodeURIComponent(`${track.artist} ${track.title}`);
+  if (provider === "spotify") return `https://open.spotify.com/search/${query}`;
+  if (provider === "soundcloud") return `https://soundcloud.com/search/sounds?q=${query}`;
+  return `https://www.youtube.com/results?search_query=${query}`;
+}
+
+function generateRandomString(length: number): string {
+  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const values = crypto.getRandomValues(new Uint8Array(length));
+  return [...values].map((x) => possible[x % possible.length]).join("");
+}
+
+async function sha256(plain: string): Promise<ArrayBuffer> {
+  return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(plain));
+}
+
+function base64Url(input: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(input)))
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+function redirectUri(): string {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+export function configuredSpotifyClientId(): string {
+  if (typeof window === "undefined") return process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ?? "";
+  return (
+    localStorage.getItem(SPOTIFY_CLIENT_ID_KEY) ||
+    process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ||
+    ""
+  );
+}
+
+export function storeSpotifyClientId(clientId: string): void {
+  localStorage.setItem(SPOTIFY_CLIENT_ID_KEY, clientId.trim());
+}
+
+export async function startSpotifyLogin(clientId: string): Promise<void> {
+  const codeVerifier = generateRandomString(64);
+  const state = generateRandomString(24);
+  localStorage.setItem(SPOTIFY_VERIFIER_KEY, codeVerifier);
+  localStorage.setItem(SPOTIFY_STATE_KEY, state);
+
+  const codeChallenge = base64Url(await sha256(codeVerifier));
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: "code",
+    redirect_uri: redirectUri(),
+    scope: SPOTIFY_SCOPES,
+    code_challenge_method: "S256",
+    code_challenge: codeChallenge,
+    state,
+  });
+  window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+}
+
+export async function completeSpotifyLoginFromUrl(clientId: string): Promise<boolean> {
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  if (!code || !state) return false;
+  if (state !== localStorage.getItem(SPOTIFY_STATE_KEY)) throw new Error("Spotify state mismatch");
+
+  const verifier = localStorage.getItem(SPOTIFY_VERIFIER_KEY);
+  if (!verifier) throw new Error("Missing Spotify verifier");
+
+  const body = new URLSearchParams({
+    client_id: clientId,
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: redirectUri(),
+    code_verifier: verifier,
+  });
+
+  const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  if (!response.ok) throw new Error(`Spotify token exchange failed: ${response.status}`);
+  const token = (await response.json()) as { access_token: string; expires_in: number };
+  localStorage.setItem(
+    SPOTIFY_TOKEN_KEY,
+    JSON.stringify({
+      accessToken: token.access_token,
+      expiresAt: Date.now() + token.expires_in * 1000 - 60_000,
+    }),
+  );
+  localStorage.removeItem(SPOTIFY_VERIFIER_KEY);
+  localStorage.removeItem(SPOTIFY_STATE_KEY);
+  url.searchParams.delete("code");
+  url.searchParams.delete("state");
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  return true;
+}
+
+export function spotifyAccessToken(): string | null {
+  const raw = localStorage.getItem(SPOTIFY_TOKEN_KEY);
+  if (!raw) return null;
+  try {
+    const token = JSON.parse(raw) as { accessToken: string; expiresAt: number };
+    if (!token.accessToken || token.expiresAt < Date.now()) return null;
+    return token.accessToken;
+  } catch {
+    return null;
+  }
+}
+
+async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
+  const response = await fetch(`https://api.spotify.com/v1${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) throw new Error(`Spotify request failed: ${response.status}`);
+  return response.json() as Promise<T>;
+}
+
+export async function fetchSpotifyPlaylists(accessToken: string): Promise<SpotifyPlaylist[]> {
+  const data = await spotifyGet<{
+    items: { id: string; name: string; tracks: { total: number } }[];
+  }>("/me/playlists?limit=50", accessToken);
+  return data.items.map((playlist) => ({
+    id: playlist.id,
+    name: playlist.name,
+    tracksTotal: playlist.tracks.total,
+  }));
+}
+
+export async function fetchSpotifyPlaylistTracks(
+  playlistId: string,
+  accessToken: string,
+): Promise<StreamingTrack[]> {
+  const tracks: StreamingTrack[] = [];
+  let path = `/playlists/${playlistId}/tracks?limit=100&fields=items(track(name,external_urls,album(name),artists(name))),next`;
+  while (path && tracks.length < 250) {
+    const data = await spotifyGet<{
+      next: string | null;
+      items: {
+        track: {
+          name: string;
+          external_urls?: { spotify?: string };
+          album?: { name?: string };
+          artists?: { name: string }[];
+        } | null;
+      }[];
+    }>(path, accessToken);
+    for (const item of data.items) {
+      if (!item.track?.name || !item.track.artists?.length) continue;
+      tracks.push({
+        title: item.track.name,
+        artist: item.track.artists.map((artist) => artist.name).join(", "),
+        album: item.track.album?.name,
+        url: item.track.external_urls?.spotify,
+        source: "spotify",
+      });
+    }
+    path = data.next ? data.next.replace("https://api.spotify.com/v1", "") : "";
+  }
+  return tracks;
+}
+
+export function motifLegend() {
+  return allGenreMotifs().map((motif) => ({
+    genre: motif.genre,
+    mood: motif.mood,
+    primary: motif.primary,
+  }));
+}

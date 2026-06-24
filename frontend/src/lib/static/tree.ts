@@ -8,7 +8,16 @@ function treeDepthConfig(numSeeds: number): [number, number, number] {
   if (numSeeds <= 1) return [24, 4, 2];
   if (numSeeds <= 3) return [16, 3, 2];
   if (numSeeds <= 5) return [12, 2, 1];
-  return [8, 2, 1];
+  if (numSeeds <= 12) return [6, 1, 0];
+  return [3, 1, 0];
+}
+
+function maxRecsPerSeed(numSeeds: number): number {
+  if (numSeeds <= 1) return 24;
+  if (numSeeds <= 3) return 18;
+  if (numSeeds <= 5) return 12;
+  if (numSeeds <= 12) return 6;
+  return 3;
 }
 
 function graphNodeId(trackId: string, parentId?: string | null): string {
@@ -41,7 +50,9 @@ export async function buildManualTreeStatic(body: {
   if (!resolved.length) throw new Error("No songs could be resolved");
 
   let [l1, l2, l3] = treeDepthConfig(resolved.length);
-  if (body.recs_per_seed != null) l1 = Math.max(body.recs_per_seed, l1);
+  if (body.recs_per_seed != null) {
+    l1 = Math.min(Math.max(body.recs_per_seed, 4), maxRecsPerSeed(resolved.length));
+  }
 
   const buildSeed = (Math.random() * 0x7fffffff) | 0;
   const rng = mulberry32(buildSeed);

@@ -80,8 +80,10 @@ export function StarfieldBackground() {
 
       const mx = (mouse.current.x - 0.5) * 2;
       const my = (mouse.current.y - 0.5) * 2;
+      const projected: { x: number; y: number; alpha: number }[] = [];
 
-      for (const star of starsRef.current) {
+      for (let i = 0; i < starsRef.current.length; i++) {
+        const star = starsRef.current[i]!;
         const layer = LAYERS[star.layer];
         const twinkle =
           0.4 +
@@ -101,6 +103,23 @@ export function StarfieldBackground() {
           ? `rgba(230, 220, 255, ${alpha})`
           : `rgba(195, 200, 225, ${alpha * 0.9})`;
         ctx.fillRect(Math.floor(px), Math.floor(py), bright ? 2 : 1, bright ? 2 : 1);
+        if (i % 7 === 0) projected.push({ x: px, y: py, alpha });
+      }
+
+      for (let i = 0; i < projected.length; i++) {
+        const a = projected[i]!;
+        for (let j = i + 1; j < projected.length; j++) {
+          const b = projected[j]!;
+          const dist = Math.hypot(a.x - b.x, a.y - b.y);
+          if (dist > 130) continue;
+          const alpha = (1 - dist / 130) * Math.min(a.alpha, b.alpha) * 0.09;
+          ctx.strokeStyle = `rgba(125, 211, 252, ${alpha})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
       }
 
       raf = requestAnimationFrame(draw);

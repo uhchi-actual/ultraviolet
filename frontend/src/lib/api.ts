@@ -242,7 +242,7 @@ export function buildManualTree(body: {
   recs_per_seed?: number;
   obscurity_dial?: number;
 }): Promise<{ tree: TreeGraph }> {
-  return import("./static/tree").then((m) =>
-    m.buildManualTreeStatic(body).then((r) => ({ tree: r.tree })),
+  return import("./static/streamingTree").then((m) =>
+    m.buildStreamingTreeStatic(body).then((r) => ({ tree: r.tree })),
   );
 }

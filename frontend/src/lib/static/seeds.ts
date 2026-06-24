@@ -26,6 +26,20 @@ function matchScore(title: string, artist: string, track: CatalogTrack): number 
   return score;
 }
 
+function artistMatches(inputArtist: string, trackArtist: string): boolean {
+  const aIn = norm(inputArtist);
+  const aCat = norm(trackArtist);
+  if (!aIn) return true;
+  return aIn === aCat || aCat.includes(aIn) || aIn.includes(aCat);
+}
+
+function titleMatches(inputTitle: string, trackTitle: string): boolean {
+  const tIn = norm(inputTitle);
+  const tCat = norm(trackTitle);
+  if (!tIn) return true;
+  return tIn === tCat || tCat.includes(tIn) || tIn.includes(tCat);
+}
+
 export function searchFma(query: string, limit = 12): CatalogTrack[] {
   const catalog = getCatalog();
   let title = query.trim();
@@ -55,6 +69,8 @@ function resolveFmaSeed(title: string, artist: string): CatalogTrack | null {
   let best: { s: number; t: CatalogTrack } | null = null;
   for (const t of hits) {
     const s = matchScore(title, artist, t);
+    if (!titleMatches(title, t.title)) continue;
+    if (artist && !artistMatches(artist, t.artist)) continue;
     if (s < 4 || !t.clap_embedding?.length) continue;
     if (!best || s > best.s) best = { s, t };
   }

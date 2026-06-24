@@ -26,7 +26,6 @@ const AGENTS = [
 export default function HomePage() {
   return (
     <div className="space-y-20">
-      {/* ── Hero ── */}
       <section className="flex flex-col items-start gap-6">
         <div className="flex flex-wrap items-center gap-3">
           <span className="uv-gradient-text font-mono text-xs uppercase tracking-[0.2em]">
@@ -40,10 +39,9 @@ export default function HomePage() {
         </h1>
 
         <p className="max-w-2xl text-lg text-uv-text-secondary">
-          A content-based recommendation engine that listens to the audio itself — so a
-          track with 12 plays gets the same treatment as one with 50 million streams —
-          and shows you <em>why</em> every recommendation was made. This demo runs fully
-          in your browser from GitHub Pages.
+          A content-based recommendation engine that listens to the audio itself, so a
+          track with 12 plays gets the same treatment as one with 50 million streams,
+          and shows you <em>why</em> every recommendation was made.
         </p>
 
         <div className="flex flex-wrap gap-3">
@@ -62,7 +60,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Agents ── */}
       <section>
         <h2 className="mb-6 font-display text-2xl font-semibold text-uv-text-primary">
           Three agents, one orchestra
@@ -84,7 +81,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 15 identifiers ── */}
       <section>
         <h2 className="mb-2 font-display text-2xl font-semibold text-uv-text-primary">
           The 15 audio identifiers
@@ -112,18 +108,6 @@ export default function HomePage() {
             );
           })}
         </div>
-      </section>
-
-      {/* ── Status ── */}
-      <section className="rounded-xl border border-uv-border bg-uv-bg-surface/50 p-6">
-        <p className="uv-gradient-text font-mono text-xs uppercase tracking-[0.2em]">
-          Project status
-        </p>
-        <p className="mt-2 text-uv-text-secondary">
-          <span className="text-uv-text-primary">Public demo.</span> Tree and catalog
-          search run client-side over 8,000 FMA tracks — no backend, no upload. Chat,
-          Radio, and Profile require the full local stack.
-        </p>
       </section>
     </div>
   );
