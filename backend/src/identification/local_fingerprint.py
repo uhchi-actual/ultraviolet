@@ -34,18 +34,26 @@ def identify_in_catalog(
 ) -> list[dict[str, Any]]:
     """Nearest-neighbor retrieval over catalog fingerprints (chroma+MFCC + scalars)."""
     hits: list[dict[str, Any]] = []
+    catalog = recommendable_tracks()
 
     if title and title.strip():
+        title_key = track_dedupe_key({"title": title, "artist": artist or ""})
+        direct = next((track for track in catalog if track_dedupe_key(track) == title_key), None)
+        if direct and not (exclude_track_id and direct.get("track_id") == exclude_track_id):
+            hits.append(_hit_from_track(direct, confidence=0.95, reason="Catalog title match"))
+
         try:
-            match = resolve_seed_from_catalog(title.strip(), (artist or "").strip())
-            if exclude_track_id and match.get("track_id") == exclude_track_id:
-                match = None
-            if match:
-                hits.append(_hit_from_track(match, confidence=0.95, reason="Catalog title match"))
-        except ValueError:
+            if not hits:
+                match = resolve_seed_from_catalog(title.strip(), (artist or "").strip())
+                if exclude_track_id and match.get("track_id") == exclude_track_id:
+                    match = None
+                if match:
+                    hits.append(
+                        _hit_from_track(match, confidence=0.95, reason="Catalog title match")
+                    )
+        except (ImportError, ValueError):
             pass
 
-    catalog = recommendable_tracks()
     scored: list[tuple[float, dict[str, Any]]] = []
     seen_keys = {
         track_dedupe_key({"title": h.get("title", ""), "artist": h.get("artist", "")}) for h in hits

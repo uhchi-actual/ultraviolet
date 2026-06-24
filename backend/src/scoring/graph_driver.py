@@ -82,6 +82,11 @@ def genre_graph_score(
     track_b: dict[str, Any],
 ) -> float:
     """Best pairwise score across genre tags using tree distance."""
+    ids_a = _parse_genre_ids(track_a)
+    ids_b = _parse_genre_ids(track_b)
+    if set(ids_a).intersection(ids_b):
+        return _SAME_GENRE
+
     tree, _ = _load_genre_tree()
     if not tree:
         ga = track_a.get("genre_top") or track_a.get("genre_bucket") or ""
@@ -90,8 +95,6 @@ def genre_graph_score(
             return _SAME_PARENT
         return _UNRELATED
 
-    ids_a = _parse_genre_ids(track_a)
-    ids_b = _parse_genre_ids(track_b)
     if not ids_a or not ids_b:
         return _UNRELATED
 
