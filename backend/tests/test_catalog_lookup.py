@@ -1,7 +1,5 @@
 """Tests for catalog seed lookup."""
 
-import pytest
-
 from src.recommendation.catalog_lookup import resolve_seed_from_catalog
 
 
@@ -18,7 +16,12 @@ def test_resolve_fuzzy_title_local(monkeypatch):
             "energy": 0.5,
             "danceability": 0.5,
             "instrumentalness": 0.5,
-            "loudness_profile": {"peak_db": -4, "rms_db": -12, "dynamic_range": 6, "crest_factor": 2},
+            "loudness_profile": {
+                "peak_db": -4,
+                "rms_db": -12,
+                "dynamic_range": 6,
+                "crest_factor": 2,
+            },
             "texture_density": 0.5,
             "rhythmic_complexity": 0.5,
             "harmonic_darkness": 0.5,

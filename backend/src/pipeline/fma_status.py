@@ -136,7 +136,11 @@ def snapshot_from_disk(prev: dict[str, Any] | None = None) -> dict[str, Any]:
     if phase == "idle" and downloaded > 0 and downloaded < total - 1_000_000:
         phase = "downloading"
     if downloaded >= total - 1_000_000:
-        phase = prev.get("phase") if prev.get("phase") in ("extracting", "embedding", "complete") else "downloading"
+        phase = (
+            prev.get("phase")
+            if prev.get("phase") in ("extracting", "embedding", "complete")
+            else "downloading"
+        )
 
     return {
         "phase": phase,

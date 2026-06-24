@@ -34,9 +34,7 @@ async def ingest(
             detail="File too large (256 MB max).",
         )
     if not data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file."
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file.")
 
     try:
         return await soul.ingest(data, data_type)

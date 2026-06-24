@@ -26,7 +26,9 @@ KEY_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 NICHE_TERMS = ("remix", "bootleg", "edit", "flip", "rework", "vip", "dub", "version", "mashup")
 
-GENERIC_TITLES = frozenset({"", "identified track", "captured audio", "upload", "listen", "unknown"})
+GENERIC_TITLES = frozenset(
+    {"", "identified track", "captured audio", "upload", "listen", "unknown"}
+)
 GENERIC_ARTISTS = frozenset({"", "unknown", "unknown artist"})
 
 
@@ -70,7 +72,9 @@ def build_identity_queries(title: str | None, artist: str | None) -> list[str]:
     return out[:4]
 
 
-def build_niche_queries(identifiers: IdentifierVector, *, title: str | None = None, artist: str | None = None) -> list[str]:
+def build_niche_queries(
+    identifiers: IdentifierVector, *, title: str | None = None, artist: str | None = None
+) -> list[str]:
     bpm = int(round(identifiers.tempo))
     key_name = KEY_NAMES[identifiers.key % 12]
     mode = "major" if identifiers.mode == 1 else "minor"
@@ -92,7 +96,9 @@ def stem_section_hints(identifiers: IdentifierVector) -> list[str]:
     return hints[:3]
 
 
-def _identity_score(hit_title: str, hit_artist: str, title: str | None, artist: str | None) -> float:
+def _identity_score(
+    hit_title: str, hit_artist: str, title: str | None, artist: str | None
+) -> float:
     text = f"{hit_title} {hit_artist}".lower()
     score = 0.15
     a = _clean(artist).lower()
@@ -128,7 +134,16 @@ def _niche_score(hit_title: str, hit_artist: str, identifiers: IdentifierVector)
     return min(0.55, score)
 
 
-def _to_hit(raw: dict[str, str], source: str, query: str, *, identity: bool, title: str | None, artist: str | None, identifiers: IdentifierVector) -> dict[str, Any]:
+def _to_hit(
+    raw: dict[str, str],
+    source: str,
+    query: str,
+    *,
+    identity: bool,
+    title: str | None,
+    artist: str | None,
+    identifiers: IdentifierVector,
+) -> dict[str, Any]:
     conf = (
         _identity_score(raw["title"], raw.get("artist", ""), title, artist)
         if identity
@@ -146,7 +161,16 @@ def _to_hit(raw: dict[str, str], source: str, query: str, *, identity: bool, tit
     }
 
 
-async def _search_source(client: httpx.AsyncClient, source: str, queries: list[str], *, identity: bool, title: str | None, artist: str | None, identifiers: IdentifierVector) -> dict[str, Any]:
+async def _search_source(
+    client: httpx.AsyncClient,
+    source: str,
+    queries: list[str],
+    *,
+    identity: bool,
+    title: str | None,
+    artist: str | None,
+    identifiers: IdentifierVector,
+) -> dict[str, Any]:
     if not queries:
         return {"source": source, "status": "empty", "hits": []}
 
@@ -172,7 +196,17 @@ async def _search_source(client: httpx.AsyncClient, source: str, queries: list[s
     for query in queries:
         try:
             for raw in await fn(client, query, limit=5):
-                hits.append(_to_hit(raw, source, query, identity=identity, title=title, artist=artist, identifiers=identifiers))
+                hits.append(
+                    _to_hit(
+                        raw,
+                        source,
+                        query,
+                        identity=identity,
+                        title=title,
+                        artist=artist,
+                        identifiers=identifiers,
+                    )
+                )
             if identity and hits:
                 break
         except Exception as exc:
@@ -225,23 +259,82 @@ async def run_niche_search(
     if settings.enable_streaming_identity and not identity_hits:
         async with httpx.AsyncClient(follow_redirects=True) as client:
             stream_results = await asyncio.gather(
-                _search_source(client, "spotify", identity_queries, identity=True, title=title, artist=artist, identifiers=identifiers),
-                _search_source(client, "youtube", identity_queries, identity=True, title=title, artist=artist, identifiers=identifiers),
-                _search_source(client, "soundcloud", identity_queries, identity=True, title=title, artist=artist, identifiers=identifiers),
-                _search_source(client, "itunes", identity_queries, identity=True, title=title, artist=artist, identifiers=identifiers),
+                _search_source(
+                    client,
+                    "spotify",
+                    identity_queries,
+                    identity=True,
+                    title=title,
+                    artist=artist,
+                    identifiers=identifiers,
+                ),
+                _search_source(
+                    client,
+                    "youtube",
+                    identity_queries,
+                    identity=True,
+                    title=title,
+                    artist=artist,
+                    identifiers=identifiers,
+                ),
+                _search_source(
+                    client,
+                    "soundcloud",
+                    identity_queries,
+                    identity=True,
+                    title=title,
+                    artist=artist,
+                    identifiers=identifiers,
+                ),
+                _search_source(
+                    client,
+                    "itunes",
+                    identity_queries,
+                    identity=True,
+                    title=title,
+                    artist=artist,
+                    identifiers=identifiers,
+                ),
             )
             id_results.extend(stream_results)
             stream_identity = [
-                h for r in stream_results for h in r.get("hits", []) if h.get("kind") == "identity" and h["confidence"] >= 0.35
+                h
+                for r in stream_results
+                for h in r.get("hits", [])
+                if h.get("kind") == "identity" and h["confidence"] >= 0.35
             ]
             identity_hits = sorted(stream_identity, key=lambda h: h["confidence"], reverse=True)
 
             if settings.enable_streaming_niche and not identity_hits:
                 niche_results = list(
                     await asyncio.gather(
-                        _search_source(client, "spotify", niche_queries, identity=False, title=title, artist=artist, identifiers=identifiers),
-                        _search_source(client, "youtube", niche_queries, identity=False, title=title, artist=artist, identifiers=identifiers),
-                        _search_source(client, "soundcloud", niche_queries, identity=False, title=title, artist=artist, identifiers=identifiers),
+                        _search_source(
+                            client,
+                            "spotify",
+                            niche_queries,
+                            identity=False,
+                            title=title,
+                            artist=artist,
+                            identifiers=identifiers,
+                        ),
+                        _search_source(
+                            client,
+                            "youtube",
+                            niche_queries,
+                            identity=False,
+                            title=title,
+                            artist=artist,
+                            identifiers=identifiers,
+                        ),
+                        _search_source(
+                            client,
+                            "soundcloud",
+                            niche_queries,
+                            identity=False,
+                            title=title,
+                            artist=artist,
+                            identifiers=identifiers,
+                        ),
                     )
                 )
 

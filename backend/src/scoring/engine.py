@@ -10,7 +10,9 @@ from src.recommendation.scoring import MIN_SIMILARITY, apply_obscurity_bonus
 from src.scoring.ultraviolet_score import UserProfile, ultraviolet_score
 
 
-def _effective_min_score(catalog_size: int, depth: int, parent: dict[str, Any] | None = None) -> float:
+def _effective_min_score(
+    catalog_size: int, depth: int, parent: dict[str, Any] | None = None
+) -> float:
     if parent and parent.get("source") == "clap_text":
         return 0.03
     floor = MIN_SIMILARITY * 0.65
@@ -156,7 +158,9 @@ def recommend_branches(
         obscurity_dial=obscurity_dial,
         depth=depth,
         user_profile=user_profile,
-        run_stem_for_top=run_stem_for_top if depth == 1 and parent.get("source") != "clap_text" else 0,
+        run_stem_for_top=run_stem_for_top
+        if depth == 1 and parent.get("source") != "clap_text"
+        else 0,
     )
     if not scored:
         return []

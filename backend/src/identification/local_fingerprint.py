@@ -48,8 +48,7 @@ def identify_in_catalog(
     catalog = recommendable_tracks()
     scored: list[tuple[float, dict[str, Any]]] = []
     seen_keys = {
-        track_dedupe_key({"title": h.get("title", ""), "artist": h.get("artist", "")})
-        for h in hits
+        track_dedupe_key({"title": h.get("title", ""), "artist": h.get("artist", "")}) for h in hits
     }
 
     for track in catalog:

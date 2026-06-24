@@ -88,7 +88,9 @@ async def fetch_innertube_config(client: httpx.AsyncClient) -> tuple[str, str] |
         return _INNERTUBE_CACHE[0], _INNERTUBE_CACHE[1]
 
     try:
-        page = await client.get("https://www.youtube.com", headers={"User-Agent": BROWSER_UA}, timeout=12.0)
+        page = await client.get(
+            "https://www.youtube.com", headers={"User-Agent": BROWSER_UA}, timeout=12.0
+        )
         page.raise_for_status()
         key_m = re.search(r'"INNERTUBE_API_KEY":"([^"]+)"', page.text)
         ver_m = re.search(r'"INNERTUBE_CLIENT_VERSION":"([^"]+)"', page.text)
@@ -140,7 +142,9 @@ def _innertube_text(node: Any) -> str:
     return str(node.get("simpleText", ""))
 
 
-async def search_youtube_innertube(client: httpx.AsyncClient, query: str, limit: int = 6) -> list[dict[str, str]]:
+async def search_youtube_innertube(
+    client: httpx.AsyncClient, query: str, limit: int = 6
+) -> list[dict[str, str]]:
     config = await fetch_innertube_config(client)
     if not config:
         return []
@@ -166,7 +170,9 @@ async def search_youtube_innertube(client: httpx.AsyncClient, query: str, limit:
     return parse_innertube_videos(res.json())[:limit]
 
 
-async def search_soundcloud(client: httpx.AsyncClient, query: str, limit: int = 6) -> list[dict[str, str]]:
+async def search_soundcloud(
+    client: httpx.AsyncClient, query: str, limit: int = 6
+) -> list[dict[str, str]]:
     cid = await fetch_soundcloud_client_id(client)
     if not cid:
         return []
@@ -199,7 +205,9 @@ async def search_soundcloud(client: httpx.AsyncClient, query: str, limit: int = 
     return hits
 
 
-async def search_itunes(client: httpx.AsyncClient, query: str, limit: int = 5) -> list[dict[str, str]]:
+async def search_itunes(
+    client: httpx.AsyncClient, query: str, limit: int = 5
+) -> list[dict[str, str]]:
     res = await client.get(
         "https://itunes.apple.com/search",
         params={"term": query, "entity": "song", "limit": limit},

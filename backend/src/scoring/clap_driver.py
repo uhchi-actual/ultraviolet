@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import os
 from functools import lru_cache
-from typing import Any
 
 import numpy as np
 
@@ -63,7 +62,9 @@ def embed_audio(audio_array: np.ndarray, sr: int = CLAP_SAMPLE_RATE) -> list[flo
     if sr != CLAP_SAMPLE_RATE:
         import librosa
 
-        audio_array = librosa.resample(audio_array.astype(np.float32), orig_sr=sr, target_sr=CLAP_SAMPLE_RATE)
+        audio_array = librosa.resample(
+            audio_array.astype(np.float32), orig_sr=sr, target_sr=CLAP_SAMPLE_RATE
+        )
 
     inputs = processor(audio=[audio_array], sampling_rate=CLAP_SAMPLE_RATE, return_tensors="pt")
     inputs = {k: v.to(device) for k, v in inputs.items()}

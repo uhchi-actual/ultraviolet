@@ -78,7 +78,12 @@ def _echonest_features(track_id: int, echonest: Any | None) -> dict[str, Any]:
         "instrumentalness": min(1.0, max(0.0, instr)),
         "valence": min(1.0, max(0.0, valence)),
         "acousticness": min(1.0, max(0.0, acoustic)),
-        "loudness_profile": {"peak_db": -3.0, "rms_db": -12.0, "dynamic_range": 6.0, "crest_factor": 2.0},
+        "loudness_profile": {
+            "peak_db": -3.0,
+            "rms_db": -12.0,
+            "dynamic_range": 6.0,
+            "crest_factor": 2.0,
+        },
         "texture_density": 0.5,
         "rhythmic_complexity": 0.4,
         "harmonic_darkness": 0.5,
@@ -151,7 +156,9 @@ def save_fma_index(tracks: list[dict[str, Any]]) -> None:
 def save_clap_embeddings(track_ids: list[str], embeddings: np.ndarray) -> None:
     path = _embeddings_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(path, track_ids=np.array(track_ids), embeddings=embeddings.astype(np.float32))
+    np.savez_compressed(
+        path, track_ids=np.array(track_ids), embeddings=embeddings.astype(np.float32)
+    )
     logger.info("Saved CLAP embeddings: %s", path)
 
 
@@ -168,7 +175,9 @@ def _load_clap_npz() -> dict[str, np.ndarray]:
     if checkpoint.exists() and checkpoint.stat().st_size > 10:
         try:
             raw = json.loads(checkpoint.read_text(encoding="utf-8"))
-            return {k: np.asarray(v, dtype=np.float32) for k, v in raw.items() if isinstance(v, list)}
+            return {
+                k: np.asarray(v, dtype=np.float32) for k, v in raw.items() if isinstance(v, list)
+            }
         except (json.JSONDecodeError, OSError, ValueError):
             pass
     return {}

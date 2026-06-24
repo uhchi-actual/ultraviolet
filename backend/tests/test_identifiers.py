@@ -33,9 +33,7 @@ def _synthetic_stems(vocal_scale: float = 0.001, seconds: float = 8.0) -> Separa
     sr = 22050
     n = int(sr * seconds)
     t = np.linspace(0, seconds, n, endpoint=False)
-    drums = (0.7 * np.sin(2 * np.pi * 2 * t) * (np.sin(2 * np.pi * 120 * t) > 0)).astype(
-        np.float32
-    )
+    drums = (0.7 * np.sin(2 * np.pi * 2 * t) * (np.sin(2 * np.pi * 120 * t) > 0)).astype(np.float32)
     bass = (0.5 * np.sin(2 * np.pi * 55 * t)).astype(np.float32)
     other = (0.4 * np.sin(2 * np.pi * 330 * t)).astype(np.float32)
     vocals = (vocal_scale * np.sin(2 * np.pi * 200 * t)).astype(np.float32)

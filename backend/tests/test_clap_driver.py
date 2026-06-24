@@ -32,9 +32,10 @@ def test_clap_similar_tracks_same_genre():
     for candidates in by_genre.values():
         if len(candidates) >= 2:
             a, b = candidates[0], candidates[1]
-            if __import__("pathlib").Path(a["audio_path"]).exists() and __import__(
-                "pathlib"
-            ).Path(b["audio_path"]).exists():
+            if (
+                __import__("pathlib").Path(a["audio_path"]).exists()
+                and __import__("pathlib").Path(b["audio_path"]).exists()
+            ):
                 pair = (a["audio_path"], b["audio_path"])
                 break
     if pair is None:

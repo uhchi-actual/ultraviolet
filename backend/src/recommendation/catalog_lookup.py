@@ -57,7 +57,12 @@ def _default_identifiers() -> dict[str, Any]:
         "instrumentalness": 0.5,
         "valence": 0.5,
         "acousticness": 0.5,
-        "loudness_profile": {"peak_db": -3.0, "rms_db": -12.0, "dynamic_range": 6.0, "crest_factor": 2.0},
+        "loudness_profile": {
+            "peak_db": -3.0,
+            "rms_db": -12.0,
+            "dynamic_range": 6.0,
+            "crest_factor": 2.0,
+        },
         "texture_density": 0.5,
         "rhythmic_complexity": 0.5,
         "harmonic_darkness": 0.5,

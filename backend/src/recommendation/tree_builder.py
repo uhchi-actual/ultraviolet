@@ -12,7 +12,9 @@ KEY_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 def _human_detail(feature_key: str, seed_ids: dict[str, Any], cand_ids: dict[str, Any]) -> str:
     if feature_key == "tempo":
-        return f"{round(cand_ids.get('tempo', 0))} BPM (seed: {round(seed_ids.get('tempo', 0))} BPM)"
+        return (
+            f"{round(cand_ids.get('tempo', 0))} BPM (seed: {round(seed_ids.get('tempo', 0))} BPM)"
+        )
     if feature_key == "key":
         k = int(cand_ids.get("key", 0)) % 12
         mode = "major" if int(cand_ids.get("mode", 0)) == 1 else "minor"
@@ -21,7 +23,14 @@ def _human_detail(feature_key: str, seed_ids: dict[str, Any], cand_ids: dict[str
         return f"{KEY_NAMES[k]} {mode} (seed: {KEY_NAMES[sk]} {smode})"
     if feature_key == "mode":
         return "major" if int(cand_ids.get("mode", 0)) == 1 else "minor"
-    if feature_key in ("energy", "danceability", "instrumentalness", "texture_density", "rhythmic_complexity", "harmonic_darkness"):
+    if feature_key in (
+        "energy",
+        "danceability",
+        "instrumentalness",
+        "texture_density",
+        "rhythmic_complexity",
+        "harmonic_darkness",
+    ):
         val = float(cand_ids.get(feature_key.replace("_rms", ""), 0) or 0)
         return f"{int(round(val * 100))}%"
     if feature_key == "vocals_stem":
@@ -115,7 +124,11 @@ def build_tree_graph(session: dict) -> dict:
         seen_rec_keys.add(dedupe)
 
         chain = rec.get("tree_chain", [])
-        summary = chain[0]["explanation"] if chain else f"Sonically close to {seed.get('title', 'your seed')}."
+        summary = (
+            chain[0]["explanation"]
+            if chain
+            else f"Sonically close to {seed.get('title', 'your seed')}."
+        )
         nodes.append(
             {
                 "id": rec["track_id"],
@@ -126,7 +139,9 @@ def build_tree_graph(session: dict) -> dict:
                 "recommendation_type": rec.get("recommendation_type", "direct"),
                 "genre_bucket": rec.get("genre_bucket"),
                 "why_summary": summary,
-                "why_details": [link.get("explanation", "") for link in chain if link.get("explanation")],
+                "why_details": [
+                    link.get("explanation", "") for link in chain if link.get("explanation")
+                ],
                 "identifiers": rec.get("identifiers", {}),
             }
         )

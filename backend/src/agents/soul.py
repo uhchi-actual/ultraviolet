@@ -173,9 +173,7 @@ class Soul:
         if not top_artists:
             return neutral_taste(), []
 
-        artist_lines = "\n".join(
-            f"- {a['artist']} ({a['plays']} plays)" for a in top_artists[:25]
-        )
+        artist_lines = "\n".join(f"- {a['artist']} ({a['plays']} plays)" for a in top_artists[:25])
         prompt = (
             "/no_think\n"
             "You are a music taste analyst. Based on this listener's most-played "

@@ -2,7 +2,19 @@
 
 from fastapi import APIRouter
 
-from src.routes import analyze, catalog, chat, fma, health, ingest, niche_search, profile, radio, search, tree
+from src.routes import (
+    analyze,
+    catalog,
+    chat,
+    fma,
+    health,
+    ingest,
+    niche_search,
+    profile,
+    radio,
+    search,
+    tree,
+)
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])

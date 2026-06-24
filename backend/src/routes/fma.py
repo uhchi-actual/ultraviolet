@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 import time
@@ -69,7 +68,11 @@ def fma_start() -> dict[str, Any]:
     args = [str(python), str(script)]
     if _catalog_complete():
         return {"started": False, "message": "Catalog already complete"}
-    if Path(__import__("src.config", fromlist=["settings"]).settings.fma_dir).joinpath("fma_small", "000", "000002.mp3").exists():
+    if (
+        Path(__import__("src.config", fromlist=["settings"]).settings.fma_dir)
+        .joinpath("fma_small", "000", "000002.mp3")
+        .exists()
+    ):
         args.append("--embed-only")
 
     subprocess.Popen(

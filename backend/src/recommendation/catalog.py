@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -138,7 +137,7 @@ def _norm_artist(artist: str) -> str:
 
 def is_fake_demo_track(track: dict[str, Any]) -> bool:
     tid = track.get("track_id", "")
-    if tid.startswith("demo_") or tid in _FAKE_DEMO_TRACK_IDS:
+    if tid in _FAKE_DEMO_TRACK_IDS:
         return True
     return _norm_artist(track.get("artist", "")) in _FAKE_DEMO_ARTISTS
 
@@ -163,7 +162,9 @@ def save_catalog(tracks: list[dict[str, Any]]) -> None:
     _catalog_path().write_text(json.dumps(tracks, indent=2), encoding="utf-8")
 
 
-def update_track_metadata(track_id: str, *, title: str | None = None, artist: str | None = None) -> dict[str, Any] | None:
+def update_track_metadata(
+    track_id: str, *, title: str | None = None, artist: str | None = None
+) -> dict[str, Any] | None:
     """Rename an analyzed track after NicheSearch identifies it."""
     tracks = list_tracks()
     for i, track in enumerate(tracks):

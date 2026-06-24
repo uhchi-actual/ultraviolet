@@ -35,8 +35,7 @@ class Conductor:
         soul_context = await self._soul_context()
         if soul_context:
             system += (
-                "\n\nWhat you know about this user from their listening data:\n"
-                f"{soul_context}"
+                f"\n\nWhat you know about this user from their listening data:\n{soul_context}"
             )
 
         messages: list[dict[str, str]] = [{"role": "system", "content": system}]
@@ -81,5 +80,5 @@ class Conductor:
             "The Conductor is online, but the local LLM (Ollama) isn't reachable yet. "
             "Start it and pull the model:\n\n"
             f"    ollama pull {self.model}\n\n"
-            f'Once it\'s running I\'ll respond properly. You said: "{message}"'
+            f"Once it's running I'll respond properly. You said: \"{message}\""
         )

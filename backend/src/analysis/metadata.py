@@ -56,10 +56,14 @@ def extract_tags(file_path: str | Path) -> tuple[str, str]:
         if audio is not None:
             tags = audio.tags or {}
             title = _clean_tag(
-                (tags.get("title") or [""])[0] if isinstance(tags.get("title"), list) else tags.get("title", "")
+                (tags.get("title") or [""])[0]
+                if isinstance(tags.get("title"), list)
+                else tags.get("title", "")
             )
             artist = _clean_tag(
-                (tags.get("artist") or [""])[0] if isinstance(tags.get("artist"), list) else tags.get("artist", "")
+                (tags.get("artist") or [""])[0]
+                if isinstance(tags.get("artist"), list)
+                else tags.get("artist", "")
             )
             if not artist:
                 albumartist = tags.get("albumartist")

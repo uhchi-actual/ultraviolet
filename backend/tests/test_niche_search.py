@@ -1,6 +1,6 @@
 """Tests for NicheSearch query building."""
 
-from src.identification.niche_search import build_identity_queries, build_niche_queries, stem_section_hints
+from src.identification.niche_search import build_identity_queries, build_niche_queries
 from src.models.identifiers import EmotionalArc, IdentifierVector, LoudnessProfile, StemPresence
 
 

@@ -24,7 +24,6 @@ def infer_genre_bucket(track: dict[str, Any]) -> str:
     dance = float(ids.get("danceability", 0.5))
     darkness = float(ids.get("harmonic_darkness", 0.5))
     texture = float(ids.get("texture_density", 0.5))
-    instrumental = float(ids.get("instrumentalness", 0.0))
     rhythm = float(ids.get("rhythmic_complexity", 0.5))
     vocals = float(ids.get("stem_presence", {}).get("vocals_pct", 15))
 

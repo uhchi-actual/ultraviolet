@@ -59,4 +59,6 @@ def test_key_similarity_same_key():
 def test_distant_tracks_lower():
     close = _ids(tempo=120, key=5, energy=0.6)
     far = _ids(tempo=180, key=0, energy=0.95, harmonic_darkness=0.1)
-    assert perceptual_similarity(close, far) < perceptual_similarity(close, _ids(tempo=122, key=5, energy=0.58))
+    assert perceptual_similarity(close, far) < perceptual_similarity(
+        close, _ids(tempo=122, key=5, energy=0.58)
+    )

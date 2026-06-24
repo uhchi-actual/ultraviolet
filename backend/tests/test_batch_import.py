@@ -1,7 +1,5 @@
 """Tests for batch metadata extraction and demo purge."""
 
-from pathlib import Path
-
 from src.analysis.metadata import extract_tags, scan_audio_files
 from src.recommendation.catalog import is_fake_demo_track, purge_demo_tracks
 

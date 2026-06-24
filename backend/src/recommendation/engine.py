@@ -10,7 +10,7 @@ from src.recommendation.bridge import find_bridges
 from src.recommendation.catalog import get_track, library_tracks
 from src.recommendation.catalog_filters import track_dedupe_key
 from src.recommendation.genre_buckets import pick_genre_diverse
-from src.recommendation.scoring import DISCOVERY_QUOTA, MIN_SIMILARITY, is_obscure
+from src.recommendation.scoring import DISCOVERY_QUOTA, is_obscure
 from src.recommendation.session import save_radio_session
 from src.recommendation.tree_builder import build_tree_chain, build_tree_graph
 from src.scoring.engine import score_catalog

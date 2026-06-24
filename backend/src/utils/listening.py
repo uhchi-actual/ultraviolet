@@ -80,8 +80,9 @@ def _parse_item(item: object) -> PlayEvent | None:
     ts = _parse_ts(ts_raw)
     if not track or not artist or ts is None:
         return None
-    return PlayEvent(ts=ts, artist=str(artist).strip(), track=str(track).strip(),
-                     ms_played=ms, skipped=skipped)
+    return PlayEvent(
+        ts=ts, artist=str(artist).strip(), track=str(track).strip(), ms_played=ms, skipped=skipped
+    )
 
 
 def parse_history(raw: bytes) -> list[PlayEvent]:
@@ -183,8 +184,11 @@ def build_documents(stats: ListeningStats) -> list[str]:
 
     for rank, a in enumerate(stats.top_artists, start=1):
         skip_note = (
-            " They skip it often." if a["skip_rate"] > 0.4
-            else " They rarely skip it." if a["skip_rate"] < 0.1 else ""
+            " They skip it often."
+            if a["skip_rate"] > 0.4
+            else " They rarely skip it."
+            if a["skip_rate"] < 0.1
+            else ""
         )
         docs.append(
             f"#{rank} most-played artist: {a['artist']} — {a['plays']} plays, "

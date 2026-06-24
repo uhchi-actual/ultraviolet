@@ -38,7 +38,7 @@ async def search_tracks(body: SearchRequest) -> dict[str, Any]:
                 reference = resolve_seed_from_catalog(parts[1].strip(), parts[0].strip())
             else:
                 for t in list_tracks():
-                    if query.lower() in f"{t.get('artist','')} {t.get('title','')}".lower():
+                    if query.lower() in f"{t.get('artist', '')} {t.get('title', '')}".lower():
                         reference = t
                         break
         except ValueError:

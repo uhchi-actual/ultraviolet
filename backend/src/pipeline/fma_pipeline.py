@@ -80,7 +80,9 @@ def download_with_progress(status: dict) -> dict:
                 fh.write(chunk)
                 now = time.time()
                 if now - last_write >= 1.0:
-                    status = __import__("src.pipeline.fma_status", fromlist=["snapshot_from_disk"]).snapshot_from_disk(status)
+                    status = __import__(
+                        "src.pipeline.fma_status", fromlist=["snapshot_from_disk"]
+                    ).snapshot_from_disk(status)
                     status["phase"] = "downloading"
                     status["message"] = "Downloading fma_small.zip"
                     status["running"] = True
@@ -88,7 +90,9 @@ def download_with_progress(status: dict) -> dict:
                     write_status(status)
                     last_write = now
 
-    status = __import__("src.pipeline.fma_status", fromlist=["snapshot_from_disk"]).snapshot_from_disk(status)
+    status = __import__(
+        "src.pipeline.fma_status", fromlist=["snapshot_from_disk"]
+    ).snapshot_from_disk(status)
     status["phase"] = "downloading"
     status["message"] = "Download finished"
     write_status(status)
@@ -192,11 +196,17 @@ def run_pipeline(*, download_only: bool = False, embed_only: bool = False) -> in
     status = default_status()
     try:
         # If curl is already downloading, wait until done instead of fighting it
-        zip_path = Path(status.get("zip_path", "")) or Path(__import__("src.config", fromlist=["settings"]).settings.fma_dir) / "fma_small.zip"
+        zip_path = (
+            Path(status.get("zip_path", ""))
+            or Path(__import__("src.config", fromlist=["settings"]).settings.fma_dir)
+            / "fma_small.zip"
+        )
         from src.pipeline.fma_status import FMA_ZIP_TOTAL_BYTES
 
         if zip_path.exists() and zip_path.stat().st_size < FMA_ZIP_TOTAL_BYTES - 1_000_000:
-            status = _set_phase(status, "downloading", "Waiting for download to finish (or downloading)")
+            status = _set_phase(
+                status, "downloading", "Waiting for download to finish (or downloading)"
+            )
             status["_started_at"] = time.time()
             write_status(status)
             logger.info("Monitoring existing download…")

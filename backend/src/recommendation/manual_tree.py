@@ -10,14 +10,14 @@ import random
 import secrets
 from typing import Any
 
-from src.catalog.fma import get_fma_track, list_fma_tracks, recommendation_pool, search_fma
+from src.catalog.fma import list_fma_tracks, recommendation_pool
 from src.recommendation.catalog import library_tracks, purge_demo_tracks, purge_junk_tracks
-from src.recommendation.catalog_filters import recommendable_tracks, track_dedupe_key
+from src.recommendation.catalog_filters import track_dedupe_key
 from src.recommendation.catalog_lookup import resolve_seed_from_catalog
 from src.recommendation.session import save_radio_session
-from src.scoring.engine import recommend_branches
 from src.recommendation.tree_builder import build_tree_chain
 from src.recommendation.tree_depth import graph_node_id, tree_depth_config
+from src.scoring.engine import recommend_branches
 
 logger = logging.getLogger("ultraviolet.manual_tree")
 
@@ -269,7 +269,9 @@ def build_multi_seed_tree(session: dict[str, Any]) -> dict[str, Any]:
                 "confidence": rec.get("confidence", 0.0),
                 "genre_bucket": rec.get("genre_bucket"),
                 "why_summary": summary,
-                "why_details": [link.get("explanation", "") for link in chain if link.get("explanation")],
+                "why_details": [
+                    link.get("explanation", "") for link in chain if link.get("explanation")
+                ],
                 "identifiers": rec.get("identifiers", {}),
                 "depth": rec.get("depth", 1),
             }

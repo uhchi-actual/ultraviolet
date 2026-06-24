@@ -7,7 +7,6 @@ import numpy as np
 from src.models.identifiers import IdentifierVector, LoudnessProfile, StemPresence
 from src.recommendation.manual_tree import build_manual_tree
 
-
 _BASE_EMB = np.random.default_rng(42).standard_normal(512).astype(np.float32)
 _BASE_EMB = _BASE_EMB / np.linalg.norm(_BASE_EMB)
 
@@ -47,7 +46,9 @@ def _track(i: int, *, tempo: float, key: int, energy: float) -> dict:
 
 
 def test_tree_reaches_40_plus_nodes_with_large_catalog(monkeypatch):
-    tracks = [_track(i, tempo=80 + (i % 40), key=i % 12, energy=0.3 + (i % 10) * 0.06) for i in range(60)]
+    tracks = [
+        _track(i, tempo=80 + (i % 40), key=i % 12, energy=0.3 + (i % 10) * 0.06) for i in range(60)
+    ]
     seed = tracks[0]
     seed["title"] = "Ceremony"
     seed["artist"] = "New Order"

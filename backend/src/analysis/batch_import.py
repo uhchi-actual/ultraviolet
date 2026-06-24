@@ -7,7 +7,6 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Iterator
-from pathlib import Path
 from typing import Any
 
 from src.analysis.metadata import extract_tags, scan_audio_files
@@ -117,7 +116,7 @@ def run_batch_import(
 
         from src.analysis.identifiers import analyze_from_file
 
-        for index, path in enumerate(files):
+        for path in files:
             if is_cancelled():
                 break
 

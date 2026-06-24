@@ -105,6 +105,3 @@ def perceptual_similarity(
         return (1.0 - _EMBED_BLEND) * scalar_sim + _EMBED_BLEND * embed_sim
 
     return scalar_sim
-
-
-from src.recommendation.vectorize import FEATURE_WEIGHT_KEYS  # noqa: E402  (re-export)

@@ -27,8 +27,14 @@ def test_parse_extended_and_basic_formats() -> None:
         ]
     ).encode()
     basic = json.dumps(
-        [{"endTime": "2024-01-01 22:00", "artistName": "Aphex Twin",
-          "trackName": "Avril 14th", "msPlayed": 120000}]
+        [
+            {
+                "endTime": "2024-01-01 22:00",
+                "artistName": "Aphex Twin",
+                "trackName": "Avril 14th",
+                "msPlayed": 120000,
+            }
+        ]
     ).encode()
 
     ext_events = parse_history(extended)
@@ -63,9 +69,7 @@ def test_compute_stats_heatmap_and_totals() -> None:
 
 def test_build_documents_and_chunker() -> None:
     events = parse_history(
-        json.dumps(
-            [_extended("2024-01-01T22:00:00Z", "Slowdive", "Alison", 250000)]
-        ).encode()
+        json.dumps([_extended("2024-01-01T22:00:00Z", "Slowdive", "Alison", 250000)]).encode()
     )
     docs = build_documents(compute_stats(events))
     assert docs and any("Slowdive" in d for d in docs)
