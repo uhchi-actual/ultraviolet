@@ -7,8 +7,6 @@
 Open the Tree, paste songs you already play, and generate a client-side discovery
 graph.
 
-![Ultraviolet Tree demo](docs/assets/tree-demo.png)
-
 Ultraviolet is a content-based music recommendation engine. Unlike collaborative
 filtering ("users who played X also played Y"), it scores audio/catalog features
 directly and shows the recommendation chain in an interactive Tree.
