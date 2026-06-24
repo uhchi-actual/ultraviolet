@@ -5,7 +5,7 @@
 **Live demo:** https://uhchi-actual.github.io/ultraviolet/
 
 Open the Tree, paste songs you already play, and generate a client-side discovery
-graph over 7,994 FMA tracks. No install, no account, no backend.
+graph.
 
 ![Ultraviolet Tree demo](docs/assets/tree-demo.png)
 
@@ -34,7 +34,7 @@ Next.js 15 (frontend)  ──REST──►  FastAPI (backend)
 Three agents, orchestrated by LangGraph:
 
 - **SOUL** — builds a living profile of the user's taste from personal data (RAG).
-- **DJ** — extracts a 15-identifier audio fingerprint from any track (pure DSP/ML).
+- **DJ** — extracts a 15 point identifier audio fingerprint from any track (pure DSP/ML).
 - **Conductor** — routes queries, runs the recommendation engine, builds the Tree,
   and generates natural-language explanations via a local LLM.
 
@@ -57,7 +57,7 @@ ultraviolet/
 
 **https://uhchi-actual.github.io/ultraviolet/**
 
-Static client-side demo — no install, no backend. Tree and catalog search run in the browser over 7,994 FMA tracks.
+Static client-side demo
 
 | Page | Static demo |
 |------|-------------|
@@ -109,24 +109,6 @@ cd frontend
 npm install
 npm run dev
 ```
-
----
-
-## Status (2026-06)
-
-**Public demo:** static GitHub Pages build (`frontend/` → `out/`). See [`HANDOFF.md`](HANDOFF.md) for resume notes.
-
-**Local full stack:** FastAPI + CLAP/Demucs analysis, FMA 8K catalog on `D:\ultraviolet-data\`, multi-driver scoring, manual tree API.
-
-- [x] Static Tree + FMA search in-browser (GitHub Pages)
-- [x] FMA 8K catalog + CLAP embeddings pipeline
-- [x] Multi-driver scoring (CLAP + spectral + graph + MMR)
-- [x] DJ analysis pipeline (Demucs stems, 15 identifiers)
-- [ ] SOUL profile RAG (Chroma + ingest)
-- [ ] Conductor chat with live recommendations
-- [ ] Radio playback
-
-Earlier Phase 1 scaffolding (Docker, theme, routes) remains; see git history.
 
 ---
 
