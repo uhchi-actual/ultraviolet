@@ -1,118 +1,103 @@
 # Ultraviolet
 
-> Browser-only music discovery demo with an explainable recommendation Tree.
+Browser-based music discovery and playlist radio.
 
 **Live demo:** https://uhchi-actual.github.io/ultraviolet/
 
-Open the Tree, paste songs you already play, and generate a client-side discovery
-graph.
+**Primary route:** https://uhchi-actual.github.io/ultraviolet/tree/
 
-Ultraviolet is a content-based music recommendation engine. Unlike collaborative
-filtering ("users who played X also played Y"), it scores audio/catalog features
-directly and shows the recommendation chain in an interactive Tree.
+Ultraviolet turns a list of songs into an interactive recommendation map. It can
+import Spotify playlists, build a genre-aware radio sequence, surface unusual
+seed tracks, and export a generated mix to YouTube.
 
----
+## Features
+
+- Interactive music web with animated, genre-colored recommendation links.
+- Playlist radio built from user seeds, close matches, bridge tracks, and a few
+  recognizable anchors.
+- Spotify playlist import through the official Web API authorization flow.
+- YouTube playlist export for generated mixes.
+- Streaming search links for Spotify, YouTube, and SoundCloud.
+
+## Usage
+
+Open the Tree and enter songs as:
+
+```text
+Artist - Title
+```
+
+To import a Spotify playlist:
+
+1. Create an app in the Spotify Developer Dashboard.
+2. Copy the app's Client ID into Ultraviolet.
+3. Add the exact Tree URL you are using as a redirect URI in Spotify:
+   - `https://uhchi-actual.github.io/ultraviolet/tree/` for the public demo
+   - `http://localhost:3000/tree/` for local development
+4. Paste a Spotify playlist link and import it.
+
+To export a generated radio mix to YouTube, enter a Google OAuth Client ID in
+the export panel. Ultraviolet requests YouTube write access during export.
 
 ## Architecture
 
-```
-Next.js 15 (frontend)  ──REST──►  FastAPI (backend)
-                                     │
-                         ┌───────────┼───────────┐
-                       SOUL          DJ        Conductor
-                    (profiler)   (analyzer)  (orchestrator)
-                         │           │            │
-                     ChromaDB    librosa/      Ollama
-                     (vectors)   essentia      (LLM)
-                         └───────────┴────────────┘
-                                     │
-                              PostgreSQL
-```
+The public demo is a static Next.js export deployed to GitHub Pages.
 
-Three agents, orchestrated by LangGraph:
+The optional backend remains in the repository for local research workflows:
+audio analysis, catalog scoring, embeddings, and API experiments. The public
+Tree and Radio routes are built to run from static frontend assets.
 
-- **SOUL** — builds a living profile of the user's taste from personal data (RAG).
-- **DJ** — extracts a 15 point identifier audio fingerprint from any track (pure DSP/ML).
-- **Conductor** — routes queries, runs the recommendation engine, builds the Tree,
-  and generates natural-language explanations via a local LLM.
+## Local Development
 
----
-
-## Repository layout
-
-```
-ultraviolet/
-├── docker-compose.yml      # 5 services: frontend, backend, postgres, chromadb, ollama
-├── frontend/               # Next.js 15 + Tailwind v4 (App Router)
-├── backend/                # FastAPI + LangGraph + librosa/essentia
-├── data/                   # Local audio + personal-data exports (gitignored)
-└── docs/                   # Architecture / identifiers / API / tree / setup
-```
-
----
-
-## Live demo (GitHub Pages)
-
-**https://uhchi-actual.github.io/ultraviolet/**
-
-Static client-side demo
-
-| Page | Static demo |
-|------|-------------|
-| Tree | Full — type `Artist - Title`, build constellation |
-| Analyze | Catalog search only (upload needs local stack) |
-| Chat / Radio / Profile | Local stack only |
-
----
-
-## Quick start
-
-### Option A — Docker (full stack)
-
-> Requires Docker Desktop with the NVIDIA container runtime for GPU access.
+Install dependencies:
 
 ```bash
-cp .env.example .env
-docker compose up --build
-
-# Once Ollama is up, pull the models:
-docker exec ultraviolet-ollama-1 ollama pull goekdenizguelmez/JOSIEFIED-Qwen3:8b
-docker exec ultraviolet-ollama-1 ollama pull nomic-embed-text
+npm run install:all
 ```
 
-- Frontend: http://localhost:3000
-- Backend docs: http://localhost:8000/docs
+Run the frontend and optional backend helpers:
 
-### Option B — Local dev (no Docker)
+```bash
+npm run dev
+```
 
-**Backend**
+Build the static frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+Run only the frontend:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Run the backend directly:
 
 ```bash
 cd backend
 python -m venv .venv
-# Windows:  .venv\Scripts\activate
-# Unix:     source .venv/bin/activate
-pip install -e ".[dev]"
-uvicorn src.main:app --reload --port 8000
+.venv\Scripts\activate
+pip install -e ".[dev,audio]"
+uvicorn src.main:app --reload --port 8001
 ```
 
-> Note: `librosa` and (especially) `essentia` are heavy native packages that
-> are easiest to install inside the Linux backend container. The FastAPI app
-> boots without them — audio analysis modules import them lazily.
+## Repository Map
 
-**Frontend**
+- `frontend/src/app/tree/` - public recommendation map route
+- `frontend/src/app/radio/` - playlist radio route
+- `frontend/src/components/tree/` - map UI, animation, and source panels
+- `frontend/src/components/radio/` - radio controls and recommendation cards
+- `frontend/src/lib/static/` - static catalog, seeds, paths, and scoring
+- `frontend/src/lib/streaming.ts` - playlist parsing and Spotify import
+- `frontend/src/lib/playlistRadio.ts` - radio sequencing
+- `frontend/src/lib/youtube.ts` - YouTube export helpers
+- `backend/src/` - optional local analysis and recommendation services
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Deployment
 
----
-
-## Tech stack
-
-**Frontend:** Next.js 15, TypeScript, Tailwind CSS v4, React Flow, Framer Motion, D3, Recharts, shadcn/ui
-**Backend:** FastAPI, LangGraph, Ollama, librosa, essentia, ChromaDB, SQLModel, Pydantic v2
-**Data:** PostgreSQL 16, ChromaDB
-**Infra:** Docker Compose, GitHub Actions, Ollama (JOSIEFIED-Qwen3:8b)
+GitHub Pages serves the static frontend export. The repository sidebar points to
+the public demo.
