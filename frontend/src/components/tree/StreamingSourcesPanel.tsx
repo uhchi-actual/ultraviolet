@@ -194,13 +194,6 @@ export function StreamingSourcesPanel({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => onUseSeeds(tracksToSeedText(tracks, 50))}
-            className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-sm text-uv-text-primary transition hover:border-uv-purple-bright"
-          >
-            Use as seeds
-          </button>
-          <button
-            type="button"
             onClick={() => onBuild(mixedSeeds)}
             className="rounded-md border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-3 py-2 text-sm font-semibold text-uhchi-teal-bright transition hover:bg-uhchi-secondary/20"
           >
