@@ -173,7 +173,7 @@ export function TreeCanvas({ graph }: { graph: TreeGraph }) {
 
             <TransformComponent
               wrapperClass="!h-full !w-full cursor-grab active:cursor-grabbing"
-              contentClass="!h-full !w-full"
+              contentClass="relative"
             >
               <div className="relative" style={{ width: W, height: H }}>
                 <GlowingThreads edges={graph.edges} positions={positions} nodesById={nodesById} />

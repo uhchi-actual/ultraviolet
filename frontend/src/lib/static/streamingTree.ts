@@ -6,7 +6,7 @@ import {
   type DiscoveryTrack,
   type StreamingTrack,
 } from "@/lib/streaming";
-import type { TreeGraph, TreeNode } from "@/lib/types";
+import type { TreeEdge, TreeGraph, TreeNode } from "@/lib/types";
 
 const RELATED_GENRES: Record<string, string[]> = {
   Rock: ["Experimental", "Electronic", "Pop"],
@@ -47,6 +47,105 @@ function confidence(seed: StreamingTrack, track: DiscoveryTrack, agent: Recommen
   const base = agent === "genre agent" ? 0.89 : agent === "bridge agent" ? 0.8 : agent === "familiar seed" ? 0.76 : 0.72;
   const jitter = (hash(`${trackKey(seed)}|${trackKey(track)}|${agent}`) % 90) / 1000;
   return Math.round(Math.min(0.98, base + jitter) * 1000) / 1000;
+}
+
+function genreAffinity(a?: string, b?: string): number {
+  if (!a || !b) return 0.32;
+  if (a === b) return 1;
+  if ((RELATED_GENRES[a] ?? []).includes(b) || (RELATED_GENRES[b] ?? []).includes(a)) return 0.68;
+  return 0.28;
+}
+
+function nodeAffinity(a: TreeNode, b: TreeNode): number {
+  const genreScore = genreAffinity(a.genre_bucket, b.genre_bucket);
+  const sameArtist = clean(a.artist).toLowerCase() === clean(b.artist).toLowerCase() ? 0.08 : 0;
+  const seedBridge = a.id.startsWith("seed:") && b.id.startsWith("seed:") ? 0.08 : 0;
+  const landmark = a.type === "seed" || b.type === "seed" ? 0.03 : 0;
+  const jitter = (hash(`${a.id}|${b.id}|mesh`) % 70) / 1000;
+  return Math.min(0.98, genreScore + sameArtist + seedBridge + landmark + jitter);
+}
+
+function roundedWeight(value: number): number {
+  return Math.round(Math.max(0.18, Math.min(0.98, value)) * 1000) / 1000;
+}
+
+function addUniqueEdge(
+  edges: TreeEdge[],
+  edgeKeys: Set<string>,
+  source: string,
+  target: string,
+  weight: number,
+  kind: NonNullable<TreeEdge["kind"]>,
+): boolean {
+  if (source === target) return false;
+  const edgeKey = [source, target].sort().join("::");
+  if (edgeKeys.has(edgeKey)) return false;
+  edgeKeys.add(edgeKey);
+  edges.push({ source, target, weight: roundedWeight(weight), kind });
+  return true;
+}
+
+function rankedNeighbors(
+  node: TreeNode,
+  candidates: TreeNode[],
+  basis: string,
+): { node: TreeNode; affinity: number }[] {
+  return candidates
+    .filter((candidate) => candidate.id !== node.id)
+    .map((candidate) => ({
+      node: candidate,
+      affinity: nodeAffinity(node, candidate),
+    }))
+    .sort((a, b) => {
+      const affinityDelta = b.affinity - a.affinity;
+      if (Math.abs(affinityDelta) > 0.001) return affinityDelta;
+      return (hash(`${basis}|${a.node.id}`) >>> 0) - (hash(`${basis}|${b.node.id}`) >>> 0);
+    });
+}
+
+function addInterconnectionEdges(
+  nodes: TreeNode[],
+  edges: TreeEdge[],
+  primarySeedIds: Set<string>,
+  layoutSeed: number,
+): void {
+  const edgeKeys = new Set(edges.map((edge) => [edge.source, edge.target].sort().join("::")));
+  const primarySeeds = nodes.filter((node) => primarySeedIds.has(node.id));
+  const nonPrimary = nodes.filter((node) => !primarySeedIds.has(node.id));
+  const maxSeedNeighbors = primarySeeds.length <= 2 ? 1 : 2;
+
+  for (const seed of primarySeeds) {
+    let added = 0;
+    for (const { node, affinity } of rankedNeighbors(seed, primarySeeds, `${layoutSeed}|seed-bridge|${seed.id}`)) {
+      if (affinity < 0.36) continue;
+      if (addUniqueEdge(edges, edgeKeys, seed.id, node.id, 0.48 + affinity * 0.42, "seed_bridge")) added++;
+      if (added >= maxSeedNeighbors) break;
+    }
+  }
+
+  for (const seed of primarySeeds) {
+    let added = 0;
+    for (const { node, affinity } of rankedNeighbors(seed, nonPrimary, `${layoutSeed}|seed-to-cloud|${seed.id}`)) {
+      if (affinity < 0.58) continue;
+      if (addUniqueEdge(edges, edgeKeys, seed.id, node.id, 0.38 + affinity * 0.42, "bridge")) added++;
+      if (added >= 2) break;
+    }
+  }
+
+  const meshBudget = Math.min(120, Math.max(28, Math.floor(nodes.length * 0.85)));
+  let meshAdded = 0;
+  for (const node of nonPrimary) {
+    let nodeAdded = 0;
+    for (const { node: neighbor, affinity } of rankedNeighbors(node, nonPrimary, `${layoutSeed}|mesh|${node.id}`)) {
+      if (affinity < 0.64) continue;
+      if (addUniqueEdge(edges, edgeKeys, node.id, neighbor.id, 0.28 + affinity * 0.36, "mesh")) {
+        meshAdded++;
+        nodeAdded++;
+      }
+      if (nodeAdded >= 2 || meshAdded >= meshBudget) break;
+    }
+    if (meshAdded >= meshBudget) break;
+  }
 }
 
 function perSeedLimit(numSeeds: number, requested?: number): number {
@@ -160,6 +259,7 @@ export async function buildStreamingTreeStatic(body: {
   const used = new Set<string>();
   const nodes: TreeNode[] = [];
   const edges: TreeGraph["edges"] = [];
+  const primarySeedIds = new Set<string>();
   const layoutSeed = hash(seeds.map(trackKey).join("|"));
   const l1 = perSeedLimit(seeds.length, body.recs_per_seed);
   const l2 = childLimit(seeds.length);
@@ -183,6 +283,7 @@ export async function buildStreamingTreeStatic(body: {
       identifiers: {},
     };
     nodes.push(seedNode);
+    primarySeedIds.add(seedNode.id);
 
     const allowFamiliar =
       familiarCount < familiarBudget &&
@@ -242,6 +343,8 @@ export async function buildStreamingTreeStatic(body: {
   if (nodes.length <= seedKeys.size) {
     throw new Error("No discovery branches matched this rotation");
   }
+
+  addInterconnectionEdges(nodes, edges, primarySeedIds, layoutSeed);
 
   return { tree: { nodes, edges, layout_seed: layoutSeed }, layout_seed: layoutSeed };
 }

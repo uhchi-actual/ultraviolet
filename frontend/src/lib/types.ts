@@ -200,7 +200,7 @@ export interface TreeEdge {
   source: string;
   target: string;
   weight: number;
-  kind?: "trunk" | "root";
+  kind?: "trunk" | "root" | "seed_bridge" | "bridge" | "mesh";
 }
 
 export interface TreeGraph {

@@ -1,8 +1,11 @@
 import {
+  forceCenter,
   forceCollide,
   forceLink,
   forceManyBody,
   forceSimulation,
+  forceX,
+  forceY,
 } from "d3-force";
 
 import type { TreeEdge, TreeGraph, TreeNode } from "@/lib/types";
@@ -30,6 +33,11 @@ function hashSeed(s: string): number {
 }
 
 type TreeSimNode = TreeNode & { x: number; y: number };
+type TreeSimLink = { source: TreeSimNode; target: TreeSimNode; kind?: TreeEdge["kind"]; weight: number };
+
+function isStructuralEdge(edge: TreeEdge): boolean {
+  return edge.kind !== "seed_bridge" && edge.kind !== "bridge" && edge.kind !== "mesh";
+}
 
 function buildChildrenMap(edges: TreeEdge[]): Map<string, string[]> {
   const map = new Map<string, string[]>();
@@ -55,23 +63,24 @@ export function computeOrganicLayout(
 
   const cx = width * 0.5;
   const cy = height * 0.48;
-  const seeds = graph.nodes.filter((n) => n.type === "seed");
-  const childrenOf = buildChildrenMap(graph.edges);
-  const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
+  const seeds = graph.nodes.filter((n) => n.id.startsWith("seed:"));
+  const roots = seeds.length ? seeds : graph.nodes.filter((n) => n.type === "seed");
+  const childrenOf = buildChildrenMap(graph.edges.filter(isStructuralEdge));
   const positions = new Map<string, LayoutPos>();
 
   // Seed supercluster — tight nucleus with slight scatter
-  const seedSpread = seeds.length <= 1 ? 0 : Math.min(820, 360 + seeds.length * 80);
-  seeds.forEach((seedNode, i) => {
-    const angle = (i / Math.max(1, seeds.length)) * Math.PI * 2 - Math.PI / 2 + rand() * 0.2;
-    const r = seeds.length <= 1 ? 0 : seedSpread * (0.74 + rand() * 0.16);
+  const seedSpread = roots.length <= 1 ? 0 : Math.min(620, 180 + Math.sqrt(roots.length) * 112);
+  roots.forEach((seedNode, i) => {
+    const angle = i * 2.399963229728653 + (rand() - 0.5) * 0.5;
+    const normalized = Math.sqrt((i + 0.65) / Math.max(1, roots.length));
+    const r = roots.length <= 1 ? 0 : seedSpread * normalized * (0.44 + rand() * 0.42);
     positions.set(seedNode.id, {
       x: cx + Math.cos(angle) * r,
-      y: cy + Math.sin(angle) * r * 0.58,
+      y: cy + Math.sin(angle) * r * 0.62,
     });
   });
 
-  const visited = new Set<string>(seeds.map((s) => s.id));
+  const visited = new Set<string>(roots.map((s) => s.id));
 
   function placeFilament(parentId: string, depth: number) {
     const kids = childrenOf.get(parentId) ?? [];
@@ -81,7 +90,7 @@ export function computeOrganicLayout(
     const baseAngle = Math.atan2(parent.y - cy, parent.x - cx);
     const spread = Math.min(Math.PI * 0.95, 0.62 + kids.length * 0.13);
     const step = kids.length > 1 ? spread / (kids.length - 1) : 0;
-    const armLen = 210 + depth * 135 + rand() * 90;
+    const armLen = 168 + depth * 118 + rand() * 74;
 
     kids.forEach((kidId, idx) => {
       if (visited.has(kidId)) return;
@@ -97,7 +106,7 @@ export function computeOrganicLayout(
     });
   }
 
-  for (const s of seeds) {
+  for (const s of roots) {
     placeFilament(s.id, 1);
   }
 
@@ -105,7 +114,7 @@ export function computeOrganicLayout(
   for (const n of graph.nodes) {
     if (!positions.has(n.id)) {
       const a = rand() * Math.PI * 2;
-      const r = width * 0.28 + rand() * width * 0.12;
+      const r = width * 0.2 + rand() * width * 0.1;
       positions.set(n.id, { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
     }
   }
@@ -116,20 +125,43 @@ export function computeOrganicLayout(
     return { ...n, x: p.x, y: p.y };
   });
   const simNodeById = new Map(simNodes.map((n) => [n.id, n]));
-  const links = graph.edges
+  const links: TreeSimLink[] = graph.edges
     .filter((e) => simNodeById.has(e.source) && simNodeById.has(e.target))
     .map((e) => ({
       source: simNodeById.get(e.source)!,
       target: simNodeById.get(e.target)!,
+      kind: e.kind,
+      weight: e.weight,
     }));
 
   const sim = forceSimulation(simNodes)
-    .force("link", forceLink(links).id((d) => (d as TreeSimNode).id).distance(185).strength(0.08))
-    .force("charge", forceManyBody().strength(-720))
-    .force("collide", forceCollide(104))
+    .force("center", forceCenter(cx, cy))
+    .force(
+      "link",
+      forceLink<TreeSimNode, TreeSimLink>(links)
+        .id((d) => d.id)
+        .distance((d) => {
+          if (d.kind === "seed_bridge") return 250;
+          if (d.kind === "bridge") return 185;
+          if (d.kind === "mesh") return 146;
+          if (d.kind === "trunk") return 168;
+          return 188;
+        })
+        .strength((d) => {
+          if (d.kind === "seed_bridge") return 0.08;
+          if (d.kind === "bridge") return 0.075;
+          if (d.kind === "mesh") return 0.04;
+          if (d.kind === "trunk") return 0.11;
+          return 0.08;
+        }),
+    )
+    .force("charge", forceManyBody().strength(-470))
+    .force("x", forceX(cx).strength(0.012))
+    .force("y", forceY(cy).strength(0.016))
+    .force("collide", forceCollide((d) => ((d as TreeSimNode).type === "seed" ? 86 : 72)))
     .stop();
 
-  for (let i = 0; i < 150; i++) sim.tick();
+  for (let i = 0; i < 230; i++) sim.tick();
 
   const final = new Map<string, LayoutPos>();
   for (const n of simNodes) {
@@ -159,4 +191,12 @@ export function constellationPath(
 export function nodeAnchor(pos: LayoutPos, type: string, end: "top" | "bottom"): LayoutPos {
   const offset = type === "seed" ? 68 : 54;
   return { x: pos.x, y: end === "bottom" ? pos.y + offset : pos.y - offset };
+}
+
+export function nodeAnchorToward(pos: LayoutPos, type: string, target: LayoutPos): LayoutPos {
+  const radius = type === "seed" ? 62 : 46;
+  const dx = target.x - pos.x;
+  const dy = target.y - pos.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: pos.x + (dx / len) * radius, y: pos.y + (dy / len) * radius };
 }
