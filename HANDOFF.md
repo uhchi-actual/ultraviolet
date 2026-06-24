@@ -1,5 +1,7 @@
 # Ultraviolet — Development Handoff
 
+**For Codex / next agent:** read **[`CODEX_HANDOFF.md`](CODEX_HANDOFF.md)** first — full PRD, correction ledger, $100 scoped plan, acceptance criteria.
+
 **Last updated:** 2026-06-17  
 **Owner:** uhchi-actual  
 **Repo path:** `D:\projects\ultraviolet`  
