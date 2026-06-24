@@ -30,11 +30,17 @@ Artist - Title
 To import a Spotify playlist:
 
 1. Create an app in the Spotify Developer Dashboard.
-2. Copy the app's Client ID into Ultraviolet.
-3. Add the exact Tree URL you are using as a redirect URI in Spotify:
+2. Copy the app's Client ID into Ultraviolet. The Client Secret is not used.
+3. Copy the redirect URI shown in Ultraviolet and add it to the Spotify app settings:
    - `https://uhchi-actual.github.io/ultraviolet/tree/` for the public demo
-   - `http://localhost:3000/tree/` for local development
+   - `http://127.0.0.1:3000/tree/` for local development
 4. Paste a Spotify playlist link and import it.
+
+For local Spotify auth, open the app at `http://127.0.0.1:3000/tree/` before
+connecting.
+
+For the deployed demo, set a repository variable named `SPOTIFY_CLIENT_ID` before
+the Pages build to prefill the Spotify Client ID field.
 
 To export a generated radio mix to YouTube, enter a Google OAuth Client ID in
 the export panel. Ultraviolet requests YouTube write access during export.

@@ -32,7 +32,7 @@ const SPOTIFY_CLIENT_ID_KEY = "ultraviolet_spotify_client_id";
 const SPOTIFY_TOKEN_KEY = "ultraviolet_spotify_token";
 const SPOTIFY_VERIFIER_KEY = "ultraviolet_spotify_code_verifier";
 const SPOTIFY_STATE_KEY = "ultraviolet_spotify_state";
-const SPOTIFY_SCOPES = "playlist-read-private playlist-read-collaborative user-read-private";
+const SPOTIFY_SCOPES = "playlist-read-private playlist-read-collaborative";
 
 export const DISCOVERY_CATALOG: DiscoveryTrack[] = [
   { artist: "Bauhaus", title: "Dark Entries", genre: "Rock", why: "angular post-punk pressure", source: "curated" },
@@ -230,13 +230,17 @@ export function parseTrackLines(text: string, source: StreamingTrack["source"] =
   const seen = new Set<string>();
   const tracks: StreamingTrack[] = [];
   for (const raw of text.split(/\r?\n/)) {
-    const line = clean(raw);
+    const rawLine = raw.trim();
+    const line = clean(rawLine);
     if (!line) continue;
+    const tab = rawLine.split(/\t+/).map(clean).filter(Boolean);
     const csv = line.split(",").map(clean);
     const byDash = line.match(/^(.+?)\s+[-\u2013\u2014]\s+(.+)$/);
     const byBy = line.match(/^(.+?)\s+by\s+(.+)$/i);
     let track: StreamingTrack | null = null;
-    if (byDash) track = { artist: byDash[1]!, title: byDash[2]!, source };
+    if (tab.length >= 2 && !/^(title|song)$/i.test(tab[0]!) && !/^artist$/i.test(tab[1]!)) {
+      track = { title: tab[0]!, artist: tab[1]!, album: tab[2], source };
+    } else if (byDash) track = { artist: byDash[1]!, title: byDash[2]!, source };
     else if (byBy) track = { title: byBy[1]!, artist: byBy[2]!, source };
     else if (csv.length >= 2) track = { title: csv[0]!, artist: csv[1]!, album: csv[2], source };
     if (!track) continue;
@@ -345,8 +349,12 @@ function base64Url(input: ArrayBuffer): string {
     .replace(/\//g, "_");
 }
 
-function redirectUri(): string {
-  return `${window.location.origin}${window.location.pathname}`;
+export function spotifyRedirectUri(): string {
+  if (typeof window === "undefined") return "";
+  const path = window.location.pathname.endsWith("/")
+    ? window.location.pathname
+    : `${window.location.pathname}/`;
+  return `${window.location.origin}${path}`;
 }
 
 export function configuredSpotifyClientId(): string {
@@ -372,7 +380,7 @@ export async function startSpotifyLogin(clientId: string): Promise<void> {
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
-    redirect_uri: redirectUri(),
+    redirect_uri: spotifyRedirectUri(),
     scope: SPOTIFY_SCOPES,
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
@@ -395,7 +403,7 @@ export async function completeSpotifyLoginFromUrl(clientId: string): Promise<boo
     client_id: clientId,
     grant_type: "authorization_code",
     code,
-    redirect_uri: redirectUri(),
+    redirect_uri: spotifyRedirectUri(),
     code_verifier: verifier,
   });
 

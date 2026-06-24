@@ -52,6 +52,8 @@ jobs:
         env:
           NEXT_PUBLIC_STATIC_MODE: "true"
           NEXT_PUBLIC_BASE_PATH: /ultraviolet
+          NEXT_PUBLIC_SPOTIFY_CLIENT_ID: ${{ vars.SPOTIFY_CLIENT_ID }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
         run: |
           npm ci
           npm run build

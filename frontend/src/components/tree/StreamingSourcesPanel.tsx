@@ -14,6 +14,7 @@ import {
   parseTrackLines,
   providerSearchUrl,
   spotifyAccessToken,
+  spotifyRedirectUri,
   startSpotifyLogin,
   storeSpotifyClientId,
   tracksToSeedText,
@@ -61,6 +62,7 @@ export function StreamingSourcesPanel({
   const [pasteText, setPasteText] = useState(STARTER_ROTATION);
   const [clientId, setClientId] = useState("");
   const [spotifyPlaylistUrl, setSpotifyPlaylistUrl] = useState("");
+  const [redirectUri, setRedirectUri] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,6 +79,7 @@ export function StreamingSourcesPanel({
     const id = configuredSpotifyClientId();
     setClientId(id);
     setYouTubeClientId(configuredYouTubeClientId());
+    setRedirectUri(spotifyRedirectUri());
     const finish = async () => {
       if (!id) return;
       try {
@@ -102,11 +105,21 @@ export function StreamingSourcesPanel({
 
   async function connectSpotify() {
     if (!clientId.trim()) {
-      setStatus("Add a Spotify Client ID");
+      setStatus("Add a Spotify Client ID. Browser PKCE does not use a Client Secret.");
       return;
     }
     storeSpotifyClientId(clientId);
     await startSpotifyLogin(clientId.trim());
+  }
+
+  async function copyRedirectUri() {
+    if (!redirectUri) return;
+    try {
+      await navigator.clipboard.writeText(redirectUri);
+      setStatus("Redirect URI copied. Add it to the Spotify app settings, save, then connect.");
+    } catch {
+      setStatus("Copy failed. Select the displayed redirect URI manually.");
+    }
   }
 
   async function loadPlaylists() {
@@ -226,8 +239,11 @@ export function StreamingSourcesPanel({
             onChange={(e) => setPasteText(e.target.value)}
             rows={7}
             className="w-full rounded-lg border border-uv-border bg-uv-bg-elevated px-3 py-2 font-mono text-sm text-uv-text-primary"
-            placeholder="Artist - Title"
+            placeholder={"Artist - Title\nSpotify copied rows also work: Title\tArtist\tAlbum"}
           />
+          <p className="mt-2 text-xs text-uv-text-muted">
+            Paste plain tracks or copied Spotify table rows. Playlist links use Spotify OAuth.
+          </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             {analysis.slice(0, 3).map((group) => (
               <div key={group.genre} className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
@@ -244,6 +260,36 @@ export function StreamingSourcesPanel({
         </div>
 
         <aside className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
+          <div className="mb-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-display text-sm font-semibold text-uv-text-primary">Spotify import</h3>
+              <span className="rounded-md border border-uv-border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-uv-text-muted">
+                PKCE
+              </span>
+            </div>
+            {redirectUri ? (
+              <div className="mt-2 rounded-md border border-uv-border bg-uv-bg-elevated/70 p-2">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-uv-text-muted">
+                  Redirect URI
+                </p>
+                <div className="mt-1 flex gap-2">
+                  <code className="min-w-0 flex-1 truncate text-[11px] text-uv-text-secondary">
+                    {redirectUri}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyRedirectUri}
+                    className="shrink-0 rounded-md border border-uv-border bg-uv-bg-primary px-2 py-1 text-[11px] text-uv-text-primary transition hover:border-uv-purple-bright"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            <p className="mt-2 text-xs text-uv-text-muted">
+              Add that exact URI in Spotify. Existing apps will reject any slash or host mismatch.
+            </p>
+          </div>
           <div className="flex gap-2">
             <input
               value={clientId}
