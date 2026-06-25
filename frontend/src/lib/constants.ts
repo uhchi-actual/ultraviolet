@@ -2,7 +2,6 @@ import type { IdentifierVector, StemPresence } from "./types";
 
 export const NAV_LINKS = [
   { href: "/tree", label: "Tree" },
-  { href: "/analyze", label: "Analyze" },
 ] as const;
 
 export type IdentifierCategory = "Sonic Foundation" | "Custom Niche";

@@ -1,3 +1,7 @@
+import {
+  EXTRA_DISCOVERY_CATALOG,
+  EXTRA_FAMILIAR_LANDMARKS,
+} from "./expandedDiscovery";
 import { allGenreMotifs, motifForGenre } from "./genreMotifs";
 
 export interface StreamingTrack {
@@ -34,7 +38,7 @@ const SPOTIFY_VERIFIER_KEY = "ultraviolet_spotify_code_verifier";
 const SPOTIFY_STATE_KEY = "ultraviolet_spotify_state";
 const SPOTIFY_SCOPES = "playlist-read-private playlist-read-collaborative";
 
-export const DISCOVERY_CATALOG: DiscoveryTrack[] = [
+const CORE_DISCOVERY_CATALOG: DiscoveryTrack[] = [
   { artist: "Bauhaus", title: "Dark Entries", genre: "Rock", why: "angular post-punk pressure", source: "curated" },
   { artist: "The Chameleons", title: "Swamp Thing", genre: "Rock", why: "wide-screen melancholy guitar", source: "curated" },
   { artist: "Fontaines D.C.", title: "Starburster", genre: "Rock", why: "tense vocal rhythm and grit", source: "curated" },
@@ -172,7 +176,7 @@ export const DISCOVERY_CATALOG: DiscoveryTrack[] = [
   { artist: "Portishead", title: "Roads", genre: "Experimental", why: "noir trip-hop despair", source: "curated" },
 ];
 
-export const FAMILIAR_LANDMARKS: DiscoveryTrack[] = [
+const CORE_FAMILIAR_LANDMARKS: DiscoveryTrack[] = [
   { artist: "Nirvana", title: "Smells Like Teen Spirit", genre: "Rock", why: "recognizable grunge landmark", source: "curated", familiarity: "mainstream" },
   { artist: "The Killers", title: "Mr. Brightside", genre: "Rock", why: "familiar indie-rock pressure point", source: "curated", familiarity: "mainstream" },
   { artist: "Radiohead", title: "Creep", genre: "Rock", why: "well-known outsider-rock anchor", source: "curated", familiarity: "mainstream" },
@@ -198,6 +202,16 @@ export const FAMILIAR_LANDMARKS: DiscoveryTrack[] = [
   { artist: "Bad Bunny", title: "Titi Me Pregunto", genre: "International", why: "global reggaeton landmark", source: "curated", familiarity: "mainstream" },
   { artist: "Rosalia", title: "Despecha", genre: "International", why: "recognizable flamenco-pop crossover", source: "curated", familiarity: "mainstream" },
   { artist: "Radiohead", title: "Everything In Its Right Place", genre: "Experimental", why: "familiar experimental-pop gateway", source: "curated", familiarity: "mainstream" },
+];
+
+export const DISCOVERY_CATALOG: DiscoveryTrack[] = [
+  ...CORE_DISCOVERY_CATALOG,
+  ...EXTRA_DISCOVERY_CATALOG,
+];
+
+export const FAMILIAR_LANDMARKS: DiscoveryTrack[] = [
+  ...CORE_FAMILIAR_LANDMARKS,
+  ...EXTRA_FAMILIAR_LANDMARKS,
 ];
 
 function clean(value: string): string {

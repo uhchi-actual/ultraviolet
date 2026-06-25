@@ -11,7 +11,7 @@ export default function ProfilePage() {
       />
       <StaticUnavailable
         feature="Profile"
-        hint="SOUL profiling needs a local backend and your Spotify export. The public demo focuses on Tree and catalog search."
+        hint="SOUL profiling needs a local backend and a listening-history export. The public demo focuses on Tree and playlist radio."
       />
     </div>
   );

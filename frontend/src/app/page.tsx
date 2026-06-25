@@ -51,12 +51,6 @@ export default function HomePage() {
           >
             Build a Tree
           </Link>
-          <Link
-            href="/analyze"
-            className="rounded-lg border border-uv-border-strong px-5 py-2.5 font-medium text-uv-text-primary transition-colors hover:border-uv-purple-bright hover:bg-uv-bg-elevated"
-          >
-            Search catalog
-          </Link>
         </div>
       </section>
 

@@ -26,7 +26,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Ultraviolet — Music Recommendation Engine",
   description:
-    "Multi-agent, content-based music recommendation engine with an explainable Tree.",
+    "Browser-based music recommendation engine with playlist radio and an explainable Tree.",
 };
 
 export default function RootLayout({

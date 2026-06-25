@@ -11,7 +11,7 @@ export default function ChatPage() {
       />
       <StaticUnavailable
         feature="Chat"
-        hint="The Conductor agent runs on a local backend with an LLM. Use Tree to explore recommendations from the bundled FMA catalog."
+        hint="The Conductor agent runs on a local backend with an LLM. Use Tree for the public playlist analysis and radio workflow."
       />
     </div>
   );
