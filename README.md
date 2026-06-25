@@ -8,7 +8,8 @@ Browser-based music discovery and playlist radio.
 
 Ultraviolet turns a list of songs into an interactive recommendation map. It can
 scan large Spotify playlists, prune them into diverse seed tracks, build a
-genre-aware radio sequence, and export a generated mix to YouTube.
+genre-aware radio sequence, and export a generated mix as a tracklist or
+YouTube search list.
 
 ## Features
 
@@ -17,7 +18,7 @@ genre-aware radio sequence, and export a generated mix to YouTube.
   recognizable anchors.
 - Spotify playlist import through the official Web API authorization flow, with
   large playlists pruned into a readable seed set.
-- YouTube playlist export for generated mixes.
+- Tracklist and YouTube search export for generated mixes.
 - Streaming search links for Spotify, YouTube, and SoundCloud.
 
 ## Usage
@@ -48,8 +49,9 @@ remains readable and fast.
 For the deployed demo, set a repository variable named `SPOTIFY_CLIENT_ID` before
 the Pages build to prefill the Spotify Client ID field.
 
-To export a generated radio mix to YouTube, enter a Google OAuth Client ID in
-the export panel. Ultraviolet requests YouTube write access during export.
+Generated radio mixes can be copied as an ordered tracklist, copied as YouTube
+search URLs, or downloaded as a text file. Direct YouTube playlist creation is
+available under the advanced API controls for owner testing.
 
 ## Architecture
 
@@ -106,7 +108,7 @@ uvicorn src.main:app --reload --port 8001
 - `frontend/src/lib/static/` - static catalog, seeds, paths, and scoring
 - `frontend/src/lib/streaming.ts` - playlist parsing and Spotify import
 - `frontend/src/lib/playlistRadio.ts` - radio sequencing
-- `frontend/src/lib/youtube.ts` - YouTube export helpers
+- `frontend/src/lib/youtube.ts` - optional YouTube API helpers
 - `backend/src/` - optional local analysis and recommendation services
 
 ## Deployment

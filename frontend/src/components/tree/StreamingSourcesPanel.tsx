@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { motifForGenre } from "@/lib/genreMotifs";
 import { buildPlaylistRadio, radioToSeedText } from "@/lib/playlistRadio";
@@ -84,9 +84,12 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   const [youtubeTitle, setYouTubeTitle] = useState("Ultraviolet Unique-Seed Radio");
   const [youtubePrivacy, setYouTubePrivacy] = useState<"private" | "unlisted" | "public">("unlisted");
   const [youtubeLimit, setYouTubeLimit] = useState(24);
+  const [exportPreviewText, setExportPreviewText] = useState<string | null>(null);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [youtubeStatus, setYouTubeStatus] = useState<string | null>(null);
   const [youtubeResult, setYouTubeResult] = useState<YouTubeExportResult | null>(null);
   const [youtubeLoading, setYouTubeLoading] = useState(false);
+  const exportTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     const id = configuredSpotifyClientId();
@@ -111,8 +114,26 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   const analysis = useMemo(() => analyzeStreamingTracks(tracks), [tracks]);
   const radio = useMemo(() => buildPlaylistRadio(tracks), [tracks]);
   const radioSeedText = useMemo(() => radioToSeedText(radio, 50), [radio]);
+  const exportTracks = useMemo(() => radio.tracks.slice(0, youtubeLimit), [radio.tracks, youtubeLimit]);
+  const exportListText = useMemo(
+    () => exportTracks.map((track) => `${track.artist} - ${track.title}`).join("\n"),
+    [exportTracks],
+  );
+  const youtubeSearchText = useMemo(
+    () =>
+      exportTracks
+        .map((track, index) => `${index + 1}. ${track.artist} - ${track.title}\n${providerSearchUrl(track, "youtube")}`)
+        .join("\n\n"),
+    [exportTracks],
+  );
+  const exportVisibleText = exportPreviewText ?? exportListText;
   const spotifySetupUri = useMemo(() => loopbackRedirectUri(redirectUri), [redirectUri]);
   const localhostRedirect = useMemo(() => isLocalhostRedirect(redirectUri), [redirectUri]);
+
+  useEffect(() => {
+    setExportPreviewText(null);
+    setExportStatus(null);
+  }, [exportListText]);
 
   async function connectSpotify() {
     if (!clientId.trim()) {
@@ -189,12 +210,61 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
     await loadPlaylist(playlistId, access);
   }
 
+  function selectExportText(value: string, statusMessage: string) {
+    setExportPreviewText(value);
+    window.setTimeout(() => {
+      exportTextAreaRef.current?.focus();
+      exportTextAreaRef.current?.select();
+    }, 0);
+    setExportStatus(statusMessage);
+  }
+
+  async function copyExportText(value: string, successMessage: string, fallbackMessage: string) {
+    if (!value) {
+      setExportStatus("Generate a radio sequence first");
+      return;
+    }
+    setExportPreviewText(value);
+    try {
+      await navigator.clipboard.writeText(value);
+      setExportStatus(successMessage);
+      return;
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = value;
+      textarea.setAttribute("readonly", "true");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      if (copied) setExportStatus(successMessage);
+      else selectExportText(value, fallbackMessage);
+    }
+  }
+
+  function downloadExportText() {
+    if (!exportListText) {
+      setExportStatus("Generate a radio sequence first");
+      return;
+    }
+    const blob = new Blob([exportListText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${youtubeTitle.trim() || "ultraviolet-radio"}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setExportStatus("Tracklist downloaded");
+  }
+
   async function createYouTubePlaylist() {
     if (!youtubeClientId.trim()) {
       setYouTubeStatus("Add a YouTube Client ID");
       return;
     }
-    const exportTracks = radio.tracks.slice(0, youtubeLimit);
     if (!exportTracks.length) {
       setYouTubeStatus("Generate a radio sequence first");
       return;
@@ -513,30 +583,22 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
           </div>
 
           <div className="min-w-0 xl:border-l xl:border-uv-border/70 xl:pl-5">
-            <h3 className="font-display text-sm font-semibold text-uv-text-primary">YouTube export</h3>
+            <h3 className="font-display text-sm font-semibold text-uv-text-primary">Export</h3>
             <div className="mt-3 space-y-2">
-              <input
-                value={youtubeClientId}
-                onChange={(e) => setYouTubeClientId(e.target.value)}
-                onFocus={preloadYouTubeIdentity}
-                placeholder="YouTube OAuth Client ID"
-                className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
-              />
               <input
                 value={youtubeTitle}
                 onChange={(e) => setYouTubeTitle(e.target.value)}
-                className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
+                placeholder="Mix title"
+                className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
               />
-              <div className="grid grid-cols-[1fr_84px] gap-2">
-                <select
-                  value={youtubePrivacy}
-                  onChange={(e) => setYouTubePrivacy(e.target.value as "private" | "unlisted" | "public")}
-                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
+              <div className="grid grid-cols-[1fr_76px] gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyExportText(exportListText, "Tracklist copied", "Tracklist selected")}
+                  className="rounded-md border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-3 py-2 text-xs font-semibold text-uhchi-teal-bright transition hover:bg-uhchi-secondary/20"
                 >
-                  <option value="private">Private</option>
-                  <option value="unlisted">Unlisted</option>
-                  <option value="public">Public</option>
-                </select>
+                  Copy tracklist
+                </button>
                 <input
                   type="number"
                   min={8}
@@ -546,25 +608,73 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
                   className="rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
                 />
               </div>
-              <button
-                type="button"
-                onClick={createYouTubePlaylist}
-                disabled={youtubeLoading}
-                className="w-full rounded-md border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-3 py-2 text-xs font-semibold text-uhchi-teal-bright transition hover:bg-uhchi-secondary/20 disabled:opacity-50"
-              >
-                {youtubeLoading ? "Creating..." : "Create on YouTube"}
-              </button>
-              {youtubeStatus ? <p className="text-xs text-uv-text-secondary">{youtubeStatus}</p> : null}
-              {youtubeResult ? (
-                <a
-                  href={youtubeResult.playlistUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block truncate rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                <button
+                  type="button"
+                  onClick={() => copyExportText(youtubeSearchText, "YouTube searches copied", "YouTube searches selected")}
+                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
                 >
-                  Open YouTube playlist
-                </a>
-              ) : null}
+                  Copy YouTube searches
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadExportText}
+                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
+                >
+                  Download .txt
+                </button>
+              </div>
+              {exportStatus ? <p className="text-xs text-uv-text-secondary">{exportStatus}</p> : null}
+              <textarea
+                ref={exportTextAreaRef}
+                value={exportVisibleText}
+                readOnly
+                rows={7}
+                aria-label="Generated radio tracklist"
+                className="w-full resize-none rounded-md border border-uv-border bg-uv-bg-primary/45 px-2 py-2 font-mono text-[11px] text-uv-text-secondary"
+              />
+              <details className="rounded-md border border-uv-border bg-uv-bg-primary/35 p-2">
+                <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.16em] text-uv-text-muted">
+                  Advanced YouTube API
+                </summary>
+                <div className="mt-3 space-y-2">
+                  <input
+                    value={youtubeClientId}
+                    onChange={(e) => setYouTubeClientId(e.target.value)}
+                    onFocus={preloadYouTubeIdentity}
+                    placeholder="YouTube OAuth Client ID"
+                    className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
+                  />
+                  <select
+                    value={youtubePrivacy}
+                    onChange={(e) => setYouTubePrivacy(e.target.value as "private" | "unlisted" | "public")}
+                    className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
+                  >
+                    <option value="private">Private</option>
+                    <option value="unlisted">Unlisted</option>
+                    <option value="public">Public</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={createYouTubePlaylist}
+                    disabled={youtubeLoading}
+                    className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright disabled:opacity-50"
+                  >
+                    {youtubeLoading ? "Creating..." : "Create on YouTube"}
+                  </button>
+                  {youtubeStatus ? <p className="text-xs text-uv-text-secondary">{youtubeStatus}</p> : null}
+                  {youtubeResult ? (
+                    <a
+                      href={youtubeResult.playlistUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
+                    >
+                      Open YouTube playlist
+                    </a>
+                  ) : null}
+                </div>
+              </details>
             </div>
           </div>
         </div>
