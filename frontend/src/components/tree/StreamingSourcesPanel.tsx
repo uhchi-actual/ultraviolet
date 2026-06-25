@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { InBrowserPreviewPlayer } from "@/components/tree/InBrowserPreviewPlayer";
 import { motifForGenre } from "@/lib/genreMotifs";
 import { buildPlaylistRadio, radioToSeedText } from "@/lib/playlistRadio";
 import {
@@ -24,13 +25,6 @@ import {
   type SpotifyPlaylist,
   type StreamingTrack,
 } from "@/lib/streaming";
-import {
-  configuredYouTubeClientId,
-  createYouTubeRadioPlaylist,
-  preloadYouTubeIdentity,
-  storeYouTubeClientId,
-  type YouTubeExportResult,
-} from "@/lib/youtube";
 
 const STARTER_ROTATION =
   "New Order - Ceremony\nThe Cure - Plainsong\nMetallica - Nothing Else Matters\nFred again.. - Delilah\nBicep - Glue\nKurt Vile - Pretty Pimpin\nGrouper - Heavy Water/I'd Rather Be Sleeping\nMF DOOM - Doomsday\nFontaines D.C. - Starburster\nBig Thief - Simulation Swarm";
@@ -80,21 +74,15 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
-  const [youtubeClientId, setYouTubeClientId] = useState("");
-  const [youtubeTitle, setYouTubeTitle] = useState("Ultraviolet Unique-Seed Radio");
-  const [youtubePrivacy, setYouTubePrivacy] = useState<"private" | "unlisted" | "public">("unlisted");
-  const [youtubeLimit, setYouTubeLimit] = useState(24);
+  const [mixTitle, setMixTitle] = useState("Ultraviolet Unique-Seed Radio");
+  const [exportLimit, setExportLimit] = useState(24);
   const [exportPreviewText, setExportPreviewText] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
-  const [youtubeStatus, setYouTubeStatus] = useState<string | null>(null);
-  const [youtubeResult, setYouTubeResult] = useState<YouTubeExportResult | null>(null);
-  const [youtubeLoading, setYouTubeLoading] = useState(false);
   const exportTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     const id = configuredSpotifyClientId();
     setClientId(id);
-    setYouTubeClientId(configuredYouTubeClientId());
     setRedirectUri(spotifyRedirectUri());
     const finish = async () => {
       if (!id) return;
@@ -114,16 +102,9 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   const analysis = useMemo(() => analyzeStreamingTracks(tracks), [tracks]);
   const radio = useMemo(() => buildPlaylistRadio(tracks), [tracks]);
   const radioSeedText = useMemo(() => radioToSeedText(radio, 50), [radio]);
-  const exportTracks = useMemo(() => radio.tracks.slice(0, youtubeLimit), [radio.tracks, youtubeLimit]);
+  const exportTracks = useMemo(() => radio.tracks.slice(0, exportLimit), [radio.tracks, exportLimit]);
   const exportListText = useMemo(
     () => exportTracks.map((track) => `${track.artist} - ${track.title}`).join("\n"),
-    [exportTracks],
-  );
-  const youtubeSearchText = useMemo(
-    () =>
-      exportTracks
-        .map((track, index) => `${index + 1}. ${track.artist} - ${track.title}\n${providerSearchUrl(track, "youtube")}`)
-        .join("\n\n"),
     [exportTracks],
   );
   const exportVisibleText = exportPreviewText ?? exportListText;
@@ -254,40 +235,10 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${youtubeTitle.trim() || "ultraviolet-radio"}.txt`;
+    link.download = `${mixTitle.trim() || "ultraviolet-radio"}.txt`;
     link.click();
     URL.revokeObjectURL(url);
     setExportStatus("Tracklist downloaded");
-  }
-
-  async function createYouTubePlaylist() {
-    if (!youtubeClientId.trim()) {
-      setYouTubeStatus("Add a YouTube Client ID");
-      return;
-    }
-    if (!exportTracks.length) {
-      setYouTubeStatus("Generate a radio sequence first");
-      return;
-    }
-    storeYouTubeClientId(youtubeClientId);
-    setYouTubeLoading(true);
-    setYouTubeResult(null);
-    setYouTubeStatus("Waiting for Google consent");
-    try {
-      const result = await createYouTubeRadioPlaylist({
-        clientId: youtubeClientId.trim(),
-        title: youtubeTitle.trim() || "Ultraviolet Unique-Seed Radio",
-        privacyStatus: youtubePrivacy,
-        tracks: exportTracks,
-        onProgress: setYouTubeStatus,
-      });
-      setYouTubeResult(result);
-      setYouTubeStatus(`Created ${result.inserted.length}/${exportTracks.length} YouTube tracks`);
-    } catch (err) {
-      setYouTubeStatus(err instanceof Error ? err.message : "YouTube export failed");
-    } finally {
-      setYouTubeLoading(false);
-    }
   }
 
   return (
@@ -583,14 +534,15 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
           </div>
 
           <div className="min-w-0 xl:border-l xl:border-uv-border/70 xl:pl-5">
-            <h3 className="font-display text-sm font-semibold text-uv-text-primary">Export</h3>
+            <h3 className="font-display text-sm font-semibold text-uv-text-primary">Browser playlist</h3>
             <div className="mt-3 space-y-2">
               <input
-                value={youtubeTitle}
-                onChange={(e) => setYouTubeTitle(e.target.value)}
+                value={mixTitle}
+                onChange={(e) => setMixTitle(e.target.value)}
                 placeholder="Mix title"
                 className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
               />
+              <InBrowserPreviewPlayer tracks={exportTracks} title={mixTitle.trim() || "Ultraviolet radio"} />
               <div className="grid grid-cols-[1fr_76px] gap-2">
                 <button
                   type="button"
@@ -603,27 +555,18 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
                   type="number"
                   min={8}
                   max={30}
-                  value={youtubeLimit}
-                  onChange={(e) => setYouTubeLimit(Math.min(30, Math.max(8, Number(e.target.value))))}
+                  value={exportLimit}
+                  onChange={(e) => setExportLimit(Math.min(30, Math.max(8, Number(e.target.value))))}
                   className="rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
                 />
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                <button
-                  type="button"
-                  onClick={() => copyExportText(youtubeSearchText, "YouTube searches copied", "YouTube searches selected")}
-                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
-                >
-                  Copy YouTube searches
-                </button>
-                <button
-                  type="button"
-                  onClick={downloadExportText}
-                  className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
-                >
-                  Download .txt
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={downloadExportText}
+                className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
+              >
+                Download .txt
+              </button>
               {exportStatus ? <p className="text-xs text-uv-text-secondary">{exportStatus}</p> : null}
               <textarea
                 ref={exportTextAreaRef}
@@ -633,48 +576,6 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
                 aria-label="Generated radio tracklist"
                 className="w-full resize-none rounded-md border border-uv-border bg-uv-bg-primary/45 px-2 py-2 font-mono text-[11px] text-uv-text-secondary"
               />
-              <details className="rounded-md border border-uv-border bg-uv-bg-primary/35 p-2">
-                <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.16em] text-uv-text-muted">
-                  Advanced YouTube API
-                </summary>
-                <div className="mt-3 space-y-2">
-                  <input
-                    value={youtubeClientId}
-                    onChange={(e) => setYouTubeClientId(e.target.value)}
-                    onFocus={preloadYouTubeIdentity}
-                    placeholder="YouTube OAuth Client ID"
-                    className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
-                  />
-                  <select
-                    value={youtubePrivacy}
-                    onChange={(e) => setYouTubePrivacy(e.target.value as "private" | "unlisted" | "public")}
-                    className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary"
-                  >
-                    <option value="private">Private</option>
-                    <option value="unlisted">Unlisted</option>
-                    <option value="public">Public</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={createYouTubePlaylist}
-                    disabled={youtubeLoading}
-                    className="w-full rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright disabled:opacity-50"
-                  >
-                    {youtubeLoading ? "Creating..." : "Create on YouTube"}
-                  </button>
-                  {youtubeStatus ? <p className="text-xs text-uv-text-secondary">{youtubeStatus}</p> : null}
-                  {youtubeResult ? (
-                    <a
-                      href={youtubeResult.playlistUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block truncate rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
-                    >
-                      Open YouTube playlist
-                    </a>
-                  ) : null}
-                </div>
-              </details>
             </div>
           </div>
         </div>

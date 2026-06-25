@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 
 import { AlbumCover } from "@/components/shared/AlbumCover";
+import { InBrowserPreviewPlayer } from "@/components/tree/InBrowserPreviewPlayer";
 import { motifForGenre } from "@/lib/genreMotifs";
 import type { TreeGraph, TreeNode } from "@/lib/types";
 
@@ -263,6 +264,7 @@ export function TreeCanvas({ graph }: { graph: TreeGraph }) {
             {selected.why_summary ? (
               <p className="mt-3 text-sm leading-relaxed text-uv-text-primary">{selected.why_summary}</p>
             ) : null}
+            <InBrowserPreviewPlayer tracks={[{ artist: selected.artist, title: selected.title }]} compact />
             <div className="mt-4 flex flex-wrap gap-2">
               <a
                 href={searchLink(selected, "spotify")}

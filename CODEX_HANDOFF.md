@@ -19,7 +19,7 @@ The Tree route is the main experience. It combines:
 - Spotify playlist import through browser PKCE.
 - Local genre and motif analysis.
 - Unique-seed playlist radio.
-- Tracklist and YouTube search export.
+- Browser preview playback and tracklist export.
 - Interactive genre-colored map with seed snapping.
 
 The public app is a static Next.js export. The optional backend remains for
@@ -70,7 +70,7 @@ Current import behavior:
 - `frontend/src/lib/static/streamingTree.ts` - static recommendation graph
 - `frontend/src/lib/streaming.ts` - parsing, Spotify import, seed pruning
 - `frontend/src/lib/playlistRadio.ts` - radio sequencing
-- `frontend/src/lib/youtube.ts` - optional YouTube API export
+- `frontend/src/lib/audioPreview.ts` - browser preview lookup
 
 ## Spotify Setup
 
@@ -112,6 +112,7 @@ Check:
 - One visible line renders per relationship.
 - Seed selector snaps to seeds.
 - Spotify import panel shows the exact redirect URI.
+- Browser playlist can load/play previews.
 - Home page has no catalog count/status pill.
 
 ## Deployment
