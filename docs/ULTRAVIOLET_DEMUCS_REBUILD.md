@@ -216,7 +216,7 @@ The Docker configuration MUST include disk limits to prevent VHDX ballooning.
 
 Add to the project setup instructions:
 
-Create `C:\Users\<username>\.wslconfig`:
+Create `<home>\.wslconfig`:
 ```ini
 [wsl2]
 diskSize=15GB

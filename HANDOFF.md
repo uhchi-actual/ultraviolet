@@ -4,8 +4,8 @@
 
 **Last updated:** 2026-06-17  
 **Owner:** uhchi-actual  
-**Repo path:** `D:\projects\ultraviolet`  
-**Runtime data:** `D:\ultraviolet-data\` (FMA zips, extracted mp3s, live catalog — not in git)
+**Repo path:** `<repo>`
+**Runtime data:** `<local-data>` (FMA zips, extracted mp3s, live catalog; not in git)
 
 ---
 
@@ -34,7 +34,7 @@ Same pattern as [Laniakea](https://uhchi-actual.github.io/laniakea/): static Git
 - CI: `.github/workflows/pages.yml` (build + deploy on push to `main`)
 
 ### Full local stack (backend)
-- FMA pipeline complete on `D:\ultraviolet-data\`
+- FMA pipeline complete in local runtime data
 - CLAP embeddings fixed (`pooler_output`, `audio=[array]`)
 - `catalog_lookup.py` — text/prototype/neighbor seeds (no "upload on Analyze" error)
 - Multi-driver scoring: CLAP + spectral + graph + MMR
@@ -77,7 +77,7 @@ backend/
 
 ### Static demo (local, no backend)
 ```powershell
-cd D:\projects\ultraviolet\frontend
+cd <repo>\frontend
 npm run build
 npx serve out -l 3999
 # → http://localhost:3999/tree/
@@ -85,16 +85,16 @@ npx serve out -l 3999
 
 ### Full stack (local dev)
 ```powershell
-cd D:\projects\ultraviolet
+cd <repo>
 npm run dev
 # Backend :8001, frontend :3000 (see frontend/.env.local)
 ```
 
 ### Regenerate static catalog (after re-embedding FMA)
 ```powershell
-$env:CATALOG_DIR = "D:\ultraviolet-data\catalog"
-python D:\projects\ultraviolet\scripts\export_static_catalog.py
-cd D:\projects\ultraviolet\frontend
+$env:CATALOG_DIR = "<local-data>\catalog"
+python <repo>\scripts\export_static_catalog.py
+cd <repo>\frontend
 npm run build
 ```
 
@@ -108,7 +108,7 @@ gh auth login
 
 **Then publish:**
 ```powershell
-cd D:\projects\ultraviolet
+cd <repo>
 .\scripts\publish-github.ps1
 ```
 

@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # ── NicheSearch (optional streaming — off by default) ──
     spotify_client_id: str = ""
     spotify_client_secret: str = ""
-    soundcloud_client_id: str = "iZIs9mpkhJqVeWKrX9R1FL2h"
+    soundcloud_client_id: str = ""
     enable_streaming_identity: bool = False
     enable_streaming_niche: bool = False
 

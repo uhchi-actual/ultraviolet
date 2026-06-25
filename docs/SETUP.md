@@ -20,7 +20,7 @@ docker exec ultraviolet-ollama-1 ollama pull nomic-embed-text
 
 **First time only** (backend venv + deps):
 ```powershell
-cd D:\projects\ultraviolet\backend
+cd <repo>\backend
 python -m venv .venv
 .\.venv\Scripts\pip install -e ".[audio,demucs,dev]"
 cd ..

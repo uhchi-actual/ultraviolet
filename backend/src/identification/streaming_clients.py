@@ -49,7 +49,7 @@ async def fetch_soundcloud_client_id(client: httpx.AsyncClient) -> str | None:
         return _SC_CID_CACHE[0]
 
     configured = settings.soundcloud_client_id.strip()
-    if configured and configured != "iZIs9mpkhJqVeWKrX9R1FL2h":
+    if configured:
         _SC_CID_CACHE = (configured, now)
         return configured
 

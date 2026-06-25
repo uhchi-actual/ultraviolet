@@ -31,7 +31,7 @@ This is a **central resume piece**, paired with [Laniakea](https://uhchi-actual.
 
 ### Full local stack — OPTIONAL (not resume-facing)
 
-Backend (FastAPI, CLAP, Demucs, Ollama, Chroma) lives at `D:\projects\ultraviolet` + data on `D:\ultraviolet-data\`. Resume visitors never touch this. Do not make resume demo depend on it.
+Backend (FastAPI, CLAP, Demucs, Ollama, Chroma) lives in the repo + local runtime data. Resume visitors never touch this. Do not make resume demo depend on it.
 
 ---
 
@@ -109,7 +109,7 @@ These are user corrections, corrections to corrections, and verified fixes. **Tr
 ┌─────────────────────────────────────────────────────────────┐
 │  LOCAL FULL STACK (development / future phases)              │
 │  npm run dev → backend :8001 + frontend :3000                │
-│  D:\ultraviolet-data\ — FMA zips, mp3s, live embeddings      │
+│  <local-data>\ — FMA zips, mp3s, live embeddings             │
 │  backend/src/ — DJ, SOUL, Conductor, scoring, catalog_lookup   │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -277,7 +277,7 @@ https://uhchi-actual.github.io/ultraviolet/
 ## 9. File map (where to edit)
 
 ```
-D:\projects\ultraviolet\                 # Git root (NOT c:\Windows\System32\ultraviolet)
+<repo>\                                  # Git root
 ├── CODEX_HANDOFF.md                       # This file
 ├── HANDOFF.md                             # Short ops handoff
 ├── README.md                              # Repo front door
@@ -296,7 +296,7 @@ D:\projects\ultraviolet\                 # Git root (NOT c:\Windows\System32\ult
     └── src/recommendation/catalog_lookup.py  # Reference for seed logic
 ```
 
-**Runtime data (not in git):** `D:\ultraviolet-data\fma\`, `D:\ultraviolet-data\catalog\`
+**Runtime data (not in git):** `<local-data>\fma\`, `<local-data>\catalog\`
 
 ---
 
@@ -304,20 +304,20 @@ D:\projects\ultraviolet\                 # Git root (NOT c:\Windows\System32\ult
 
 ```powershell
 # Verify static build
-cd D:\projects\ultraviolet\frontend
+cd <repo>\frontend
 npm run build
 npx serve out -l 3999
 # → http://localhost:3999/tree/
 
 # Offline data check
-node D:\projects\ultraviolet\scripts\verify_static_demo.mjs
+node <repo>\scripts\verify_static_demo.mjs
 
 # Regenerate catalog assets (needs numpy, local npz)
-$env:CATALOG_DIR = "D:\ultraviolet-data\catalog"
-python D:\projects\ultraviolet\scripts\export_static_catalog.py
+$env:CATALOG_DIR = "<local-data>\catalog"
+python <repo>\scripts\export_static_catalog.py
 
 # Publish
-cd D:\projects\ultraviolet
+cd <repo>
 gh auth login   # if needed
 .\scripts\publish-github.ps1
 
@@ -352,7 +352,7 @@ Constraints:
 - Goal: resume piece that actually helps discover new music (owner's rotation is stale).
 
 Start with Phase A (resume polish), then Phase B (useful discovery).
-Repo path: D:\projects\ultraviolet
+Repo path: <repo>
 Do not require npm run dev or localhost for the public demo.
 ```
 
