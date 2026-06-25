@@ -16,7 +16,7 @@ sequence.
 The Tree route is the main experience. It combines:
 
 - Song list input.
-- Spotify playlist import through browser PKCE.
+- Spotify playlist and liked songs import through browser PKCE.
 - Local genre and motif analysis.
 - Unique-seed playlist radio.
 - Browser preview playback and tracklist export.
@@ -42,6 +42,8 @@ Current import behavior:
 - Score for rarity across artist and inferred genre.
 - Select 48 diverse seeds for the source list.
 - Build a smaller map from those seeds.
+- Preserve imported Spotify preview metadata when available.
+- Browser preview playback uses Deezer first, Apple as fallback.
 
 ## Non-Negotiables
 
@@ -75,7 +77,9 @@ Current import behavior:
 ## Spotify Setup
 
 The app uses Spotify Authorization Code with PKCE from the browser. Users paste
-a Client ID, not a secret.
+a Client ID, not a secret. The public demo may be configured with a bundled
+Client ID; it is masked in the UI because browser Client IDs are public app
+identifiers, not private credentials.
 
 Redirect URI must match exactly:
 
@@ -113,6 +117,7 @@ Check:
 - Seed selector snaps to seeds.
 - Spotify import panel shows the exact redirect URI.
 - Browser playlist can load/play previews.
+- Import can auto-start Spotify auth and resume playlist/liked-songs scanning.
 - Home page has no catalog count/status pill.
 
 ## Deployment

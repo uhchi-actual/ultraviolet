@@ -7,11 +7,15 @@ import { motifForGenre } from "@/lib/genreMotifs";
 import { buildPlaylistRadio, radioToSeedText } from "@/lib/playlistRadio";
 import {
   analyzeStreamingTracks,
+  bundledSpotifyClientId,
   completeSpotifyLoginFromUrl,
+  consumePendingSpotifyImport,
   configuredSpotifyClientId,
   extractSpotifyPlaylistId,
   fetchSpotifyPlaylistTracks,
   fetchSpotifyPlaylists,
+  fetchSpotifySavedTracks,
+  maskSpotifyClientId,
   motifLegend,
   parseTrackLines,
   providerSearchUrl,
@@ -20,7 +24,9 @@ import {
   spotifyRedirectUri,
   startSpotifyLogin,
   storeSpotifyClientId,
+  storePendingSpotifyImport,
   tracksToSeedText,
+  type SpotifyPendingImport,
   type DiscoveryTrack,
   type SpotifyPlaylist,
   type StreamingTrack,
@@ -72,6 +78,8 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   const [redirectUri, setRedirectUri] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
+  const [importedSeedTracks, setImportedSeedTracks] = useState<StreamingTrack[] | null>(null);
+  const [showClientIdInput, setShowClientIdInput] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [mixTitle, setMixTitle] = useState("Ultraviolet Unique-Seed Radio");
@@ -83,6 +91,7 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   useEffect(() => {
     const id = configuredSpotifyClientId();
     setClientId(id);
+    setShowClientIdInput(!id);
     setRedirectUri(spotifyRedirectUri());
     const finish = async () => {
       if (!id) return;
@@ -90,15 +99,40 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
         const completed = await completeSpotifyLoginFromUrl(id);
         const access = spotifyAccessToken();
         setToken(access);
-        if (completed && access) setStatus("Spotify connected");
+        if (completed && access) {
+          const pending = consumePendingSpotifyImport();
+          if (pending?.kind === "playlist") {
+            setSpotifyPlaylistUrl(pending.value);
+            const playlistId = extractSpotifyPlaylistId(pending.value);
+            if (playlistId) await loadPlaylist(playlistId, access);
+            else setStatus("Spotify connected");
+          } else if (pending?.kind === "saved") {
+            await loadSavedTracks(access);
+          } else {
+            setStatus("Spotify connected");
+          }
+        }
       } catch (err) {
         setStatus(err instanceof Error ? err.message : "Spotify auth failed");
       }
     };
     finish();
+    // The OAuth callback should be consumed once on page load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const tracks = useMemo(() => parseTrackLines(pasteText), [pasteText]);
+  const parsedTracks = useMemo(() => parseTrackLines(pasteText), [pasteText]);
+  const importedSeedText = useMemo(
+    () => (importedSeedTracks ? tracksToSeedText(importedSeedTracks, importedSeedTracks.length) : ""),
+    [importedSeedTracks],
+  );
+  const tracks = useMemo(
+    () =>
+      importedSeedTracks && pasteText.trim() === importedSeedText
+        ? importedSeedTracks
+        : parsedTracks,
+    [importedSeedText, importedSeedTracks, parsedTracks, pasteText],
+  );
   const analysis = useMemo(() => analyzeStreamingTracks(tracks), [tracks]);
   const radio = useMemo(() => buildPlaylistRadio(tracks), [tracks]);
   const radioSeedText = useMemo(() => radioToSeedText(radio, 50), [radio]);
@@ -110,15 +144,18 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   const exportVisibleText = exportPreviewText ?? exportListText;
   const spotifySetupUri = useMemo(() => loopbackRedirectUri(redirectUri), [redirectUri]);
   const localhostRedirect = useMemo(() => isLocalhostRedirect(redirectUri), [redirectUri]);
+  const maskedClientId = useMemo(() => maskSpotifyClientId(clientId), [clientId]);
 
   useEffect(() => {
     setExportPreviewText(null);
     setExportStatus(null);
   }, [exportListText]);
 
-  async function connectSpotify() {
-    if (!clientId.trim()) {
+  async function beginSpotifyLogin(pending?: SpotifyPendingImport) {
+    const activeClientId = clientId.trim() || configuredSpotifyClientId();
+    if (!activeClientId) {
       setStatus("Add a Spotify Client ID. This browser PKCE flow only needs that ID.");
+      setShowClientIdInput(true);
       return;
     }
     const currentRedirect = spotifyRedirectUri();
@@ -126,8 +163,13 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
       setStatus(`Open ${loopbackRedirectUri(currentRedirect)} before connecting. Spotify rejects localhost redirects.`);
       return;
     }
-    storeSpotifyClientId(clientId);
-    await startSpotifyLogin(clientId.trim());
+    if (!bundledSpotifyClientId()) storeSpotifyClientId(activeClientId);
+    if (pending) storePendingSpotifyImport(pending);
+    await startSpotifyLogin(activeClientId);
+  }
+
+  async function connectSpotify() {
+    await beginSpotifyLogin();
   }
 
   async function copyRedirectUri() {
@@ -167,6 +209,7 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
       const items = await fetchSpotifyPlaylistTracks(id, accessToken, 5000);
       const seeds = selectDiversePlaylistSeeds(items, 48);
       const text = tracksToSeedText(seeds, seeds.length);
+      setImportedSeedTracks(seeds);
       setPasteText(text);
       setStatus(`${items.length.toLocaleString()} Spotify tracks scanned; ${seeds.length} diverse seeds selected`);
     } catch (err) {
@@ -178,17 +221,45 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
 
   async function importSpotifyPlaylistLink() {
     const access = spotifyAccessToken();
-    if (!access) {
-      setStatus("Connect Spotify first");
-      return;
-    }
     const playlistId = extractSpotifyPlaylistId(spotifyPlaylistUrl);
     if (!playlistId) {
       setStatus("Paste a Spotify playlist link or URI");
       return;
     }
+    if (!access) {
+      await beginSpotifyLogin({ kind: "playlist", value: spotifyPlaylistUrl });
+      return;
+    }
     setToken(access);
     await loadPlaylist(playlistId, access);
+  }
+
+  async function loadSavedTracks(accessToken = token) {
+    if (!accessToken) return;
+    setLoading(true);
+    setStatus("Scanning Spotify liked songs");
+    try {
+      const items = await fetchSpotifySavedTracks(accessToken, 5000);
+      const seeds = selectDiversePlaylistSeeds(items, 48);
+      const text = tracksToSeedText(seeds, seeds.length);
+      setImportedSeedTracks(seeds);
+      setPasteText(text);
+      setStatus(`${items.length.toLocaleString()} liked songs scanned; ${seeds.length} diverse seeds selected`);
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Could not load liked songs");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function importSpotifySavedTracks() {
+    const access = spotifyAccessToken();
+    if (!access) {
+      await beginSpotifyLogin({ kind: "saved" });
+      return;
+    }
+    setToken(access);
+    await loadSavedTracks(access);
   }
 
   function selectExportText(value: string, statusMessage: string) {
@@ -276,7 +347,10 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
         <div className="min-w-0">
           <textarea
             value={pasteText}
-            onChange={(e) => setPasteText(e.target.value)}
+            onChange={(e) => {
+              setImportedSeedTracks(null);
+              setPasteText(e.target.value);
+            }}
             rows={7}
             className="w-full rounded-lg border border-uv-border bg-uv-bg-elevated px-3 py-2 font-mono text-sm text-uv-text-primary"
             placeholder={"Artist - Title\nSpotify copied rows also work: Title\tArtist\tAlbum"}
@@ -341,21 +415,46 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
           <p className="mt-2 text-xs text-uv-text-muted">
             Add that exact URI in Spotify. Do not use a different port, /callback path, or missing trailing slash.
           </p>
-          <div className="mt-3 flex gap-2">
-            <input
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              placeholder="Spotify Client ID"
-              className="min-w-0 flex-1 rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
-            />
-            <button
-              type="button"
-              onClick={connectSpotify}
-              className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
-            >
-              Connect
-            </button>
-          </div>
+          {showClientIdInput ? (
+            <div className="mt-3 flex gap-2">
+              <input
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="Spotify Client ID"
+                className="min-w-0 flex-1 rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
+              />
+              <button
+                type="button"
+                onClick={connectSpotify}
+                className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
+              >
+                Connect
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-[1fr_auto_auto] gap-2">
+              <div className="min-w-0 rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2">
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-uv-text-muted">
+                  Spotify app
+                </p>
+                <p className="truncate text-xs text-uv-text-primary">{maskedClientId || "configured"}</p>
+              </div>
+              <button
+                type="button"
+                onClick={connectSpotify}
+                className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright"
+              >
+                Connect
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowClientIdInput(true)}
+                className="rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-secondary transition hover:border-uv-purple-bright hover:text-uv-text-primary"
+              >
+                Change
+              </button>
+            </div>
+          )}
           <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
             <input
               value={spotifyPlaylistUrl}
@@ -379,6 +478,14 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
             className="mt-2 w-full rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright disabled:opacity-50"
           >
             {loading ? "Loading..." : "Load Spotify playlists"}
+          </button>
+          <button
+            type="button"
+            onClick={importSpotifySavedTracks}
+            disabled={loading}
+            className="mt-2 w-full rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright disabled:opacity-50"
+          >
+            Import liked songs
           </button>
           {status ? <p className="mt-2 text-xs text-uv-text-secondary">{status}</p> : null}
           {playlists.length ? (

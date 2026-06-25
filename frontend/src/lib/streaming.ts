@@ -10,6 +10,7 @@ export interface StreamingTrack {
   album?: string;
   source?: "paste" | "spotify" | "curated";
   url?: string;
+  previewUrl?: string;
 }
 
 export interface DiscoveryTrack extends StreamingTrack {
@@ -36,7 +37,12 @@ const SPOTIFY_CLIENT_ID_KEY = "ultraviolet_spotify_client_id";
 const SPOTIFY_TOKEN_KEY = "ultraviolet_spotify_token";
 const SPOTIFY_VERIFIER_KEY = "ultraviolet_spotify_code_verifier";
 const SPOTIFY_STATE_KEY = "ultraviolet_spotify_state";
-const SPOTIFY_SCOPES = "playlist-read-private playlist-read-collaborative";
+const SPOTIFY_PENDING_IMPORT_KEY = "ultraviolet_spotify_pending_import";
+const SPOTIFY_SCOPES = "playlist-read-private playlist-read-collaborative user-library-read";
+
+export type SpotifyPendingImport =
+  | { kind: "playlist"; value: string }
+  | { kind: "saved" };
 
 const CORE_DISCOVERY_CATALOG: DiscoveryTrack[] = [
   { artist: "Bauhaus", title: "Dark Entries", genre: "Rock", why: "angular post-punk pressure", source: "curated" },
@@ -647,14 +653,43 @@ export function spotifyRedirectUri(): string {
 export function configuredSpotifyClientId(): string {
   if (typeof window === "undefined") return process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ?? "";
   return (
-    localStorage.getItem(SPOTIFY_CLIENT_ID_KEY) ||
     process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ||
+    localStorage.getItem(SPOTIFY_CLIENT_ID_KEY) ||
     ""
   );
 }
 
+export function bundledSpotifyClientId(): string {
+  return process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ?? "";
+}
+
+export function maskSpotifyClientId(clientId: string): string {
+  const cleanId = clientId.trim();
+  if (!cleanId) return "";
+  if (cleanId.length <= 8) return "configured";
+  return `${cleanId.slice(0, 4)}...${cleanId.slice(-4)}`;
+}
+
 export function storeSpotifyClientId(clientId: string): void {
   localStorage.setItem(SPOTIFY_CLIENT_ID_KEY, clientId.trim());
+}
+
+export function storePendingSpotifyImport(importRequest: SpotifyPendingImport): void {
+  localStorage.setItem(SPOTIFY_PENDING_IMPORT_KEY, JSON.stringify(importRequest));
+}
+
+export function consumePendingSpotifyImport(): SpotifyPendingImport | null {
+  const raw = localStorage.getItem(SPOTIFY_PENDING_IMPORT_KEY);
+  localStorage.removeItem(SPOTIFY_PENDING_IMPORT_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as SpotifyPendingImport;
+    if (parsed.kind === "saved") return parsed;
+    if (parsed.kind === "playlist" && parsed.value) return parsed;
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 export async function startSpotifyLogin(clientId: string): Promise<void> {
@@ -758,13 +793,14 @@ export async function fetchSpotifyPlaylistTracks(
   maxTracks = 5000,
 ): Promise<StreamingTrack[]> {
   const tracks: StreamingTrack[] = [];
-  let path = `/playlists/${playlistId}/tracks?limit=50&fields=items(track(name,external_urls,album(name),artists(name))),next`;
+  let path = `/playlists/${playlistId}/tracks?limit=50&fields=items(track(name,preview_url,external_urls,album(name),artists(name))),next`;
   while (path && tracks.length < maxTracks) {
     const data = await spotifyGet<{
       next: string | null;
       items: {
         track: {
           name: string;
+          preview_url?: string | null;
           external_urls?: { spotify?: string };
           album?: { name?: string };
           artists?: { name: string }[];
@@ -778,6 +814,43 @@ export async function fetchSpotifyPlaylistTracks(
         artist: item.track.artists.map((artist) => artist.name).join(", "),
         album: item.track.album?.name,
         url: item.track.external_urls?.spotify,
+        previewUrl: item.track.preview_url ?? undefined,
+        source: "spotify",
+      });
+      if (tracks.length >= maxTracks) break;
+    }
+    path = data.next ? data.next.replace("https://api.spotify.com/v1", "") : "";
+  }
+  return tracks;
+}
+
+export async function fetchSpotifySavedTracks(
+  accessToken: string,
+  maxTracks = 5000,
+): Promise<StreamingTrack[]> {
+  const tracks: StreamingTrack[] = [];
+  let path = "/me/tracks?limit=50&offset=0";
+  while (path && tracks.length < maxTracks) {
+    const data = await spotifyGet<{
+      next: string | null;
+      items: {
+        track: {
+          name: string;
+          preview_url?: string | null;
+          external_urls?: { spotify?: string };
+          album?: { name?: string };
+          artists?: { name: string }[];
+        } | null;
+      }[];
+    }>(path, accessToken);
+    for (const item of data.items) {
+      if (!item.track?.name || !item.track.artists?.length) continue;
+      tracks.push({
+        title: item.track.name,
+        artist: item.track.artists.map((artist) => artist.name).join(", "),
+        album: item.track.album?.name,
+        url: item.track.external_urls?.spotify,
+        previewUrl: item.track.preview_url ?? undefined,
         source: "spotify",
       });
       if (tracks.length >= maxTracks) break;

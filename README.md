@@ -16,7 +16,7 @@ genre-aware radio sequence, and play/export the generated mix in the browser.
 - Playlist radio built from user seeds, close matches, bridge tracks, and a few
   recognizable anchors.
 - Spotify playlist import through the official Web API authorization flow, with
-  large playlists pruned into a readable seed set.
+  large playlists and liked songs pruned into a readable seed set.
 - In-browser preview player for generated mixes and selected map nodes.
 - Tracklist copy/download for generated mixes.
 - Streaming search links for Spotify, YouTube, and SoundCloud.
@@ -29,15 +29,15 @@ Open the Tree and enter songs as:
 Artist - Title
 ```
 
-To import a Spotify playlist:
+To import Spotify music:
 
 1. Create an app in the Spotify Developer Dashboard.
-2. Copy the app's Client ID into Ultraviolet. The app uses Spotify's browser
-   PKCE flow.
+2. Copy the app's Client ID into Ultraviolet if the demo has not already been
+   configured. The app uses Spotify's browser PKCE flow.
 3. Copy the redirect URI shown in Ultraviolet and add it to the Spotify app settings:
    - `https://uhchi-actual.github.io/ultraviolet/tree/` for the public demo
    - `http://127.0.0.1:3000/tree/` for local development
-4. Paste a Spotify playlist link and import it.
+4. Paste a Spotify playlist link and import it, or use the liked songs import.
 
 Spotify requires an exact redirect URI match. `localhost`, a different port,
 `/callback`, or a missing trailing slash will fail.
@@ -47,10 +47,12 @@ for the map. The tree stays intentionally smaller than the source playlist so it
 remains readable and fast.
 
 For the deployed demo, set a repository variable named `SPOTIFY_CLIENT_ID` before
-the Pages build to prefill the Spotify Client ID field.
+the Pages build to configure Spotify. The Client ID is a public browser app
+identifier, not a secret; the UI masks it and never uses a client secret.
 
 Generated radio mixes can be played as a browser preview queue, copied as an
-ordered tracklist, or downloaded as a text file.
+ordered tracklist, or downloaded as a text file. Preview playback uses Spotify
+preview URLs when present, then public Deezer/Apple preview lookup as fallback.
 
 ## Architecture
 
@@ -107,7 +109,7 @@ uvicorn src.main:app --reload --port 8001
 - `frontend/src/lib/static/` - static catalog, seeds, paths, and scoring
 - `frontend/src/lib/streaming.ts` - playlist parsing and Spotify import
 - `frontend/src/lib/playlistRadio.ts` - radio sequencing
-- `frontend/src/lib/audioPreview.ts` - browser preview lookup
+- `frontend/src/lib/audioPreview.ts` - browser preview lookup and fallback matching
 - `backend/src/` - optional local analysis and recommendation services
 
 ## Deployment
