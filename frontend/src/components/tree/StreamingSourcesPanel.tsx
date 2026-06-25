@@ -246,6 +246,11 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
       setPasteText(text);
       setStatus(`${items.length.toLocaleString()} liked songs scanned; ${seeds.length} diverse seeds selected`);
     } catch (err) {
+      if (err instanceof Error && err.message.includes("403")) {
+        setStatus("Refreshing Spotify permission for liked songs");
+        await beginSpotifyLogin({ kind: "saved" });
+        return;
+      }
       setStatus(err instanceof Error ? err.message : "Could not load liked songs");
     } finally {
       setLoading(false);
