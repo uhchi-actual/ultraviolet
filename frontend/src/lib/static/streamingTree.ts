@@ -1,29 +1,22 @@
 import {
   DISCOVERY_CATALOG,
   FAMILIAR_LANDMARKS,
-  exactFamiliarLandmark,
+  STREAMING_RELATED_GENRES,
+  exactDiscoveryTrack,
   inferStreamingGenre,
+  scoreDiscoveryCandidate,
   type DiscoveryTrack,
+  type DiscoveryCandidateScore,
   type StreamingTrack,
 } from "@/lib/streaming";
 import type { TreeEdge, TreeGraph, TreeNode } from "@/lib/types";
-
-const RELATED_GENRES: Record<string, string[]> = {
-  Rock: ["Experimental", "Electronic", "Pop"],
-  Experimental: ["Rock", "Electronic", "Instrumental", "Hip-Hop"],
-  Instrumental: ["Electronic", "Folk", "Experimental"],
-  Folk: ["Pop", "Instrumental", "International"],
-  Electronic: ["Experimental", "Pop", "Instrumental", "Hip-Hop"],
-  Pop: ["Electronic", "Folk", "Rock"],
-  "Hip-Hop": ["Electronic", "Experimental", "Pop"],
-  International: ["Folk", "Electronic", "Experimental"],
-};
 
 type RecommendationAgent = "genre agent" | "bridge agent" | "diversity agent" | "familiar seed";
 
 interface PickedTrack {
   track: DiscoveryTrack;
   agent: RecommendationAgent;
+  match: DiscoveryCandidateScore;
 }
 
 function clean(value: string): string {
@@ -43,16 +36,22 @@ function hash(value: string): number {
   return h >>> 0;
 }
 
-function confidence(seed: StreamingTrack, track: DiscoveryTrack, agent: RecommendationAgent): number {
-  const base = agent === "genre agent" ? 0.89 : agent === "bridge agent" ? 0.8 : agent === "familiar seed" ? 0.76 : 0.72;
+function confidence(
+  seed: StreamingTrack,
+  track: DiscoveryTrack,
+  agent: RecommendationAgent,
+  matchScore = 0.45,
+): number {
+  const clampedScore = Math.max(0, Math.min(1, matchScore));
+  const base = agent === "genre agent" ? 0.62 : agent === "bridge agent" ? 0.58 : agent === "familiar seed" ? 0.56 : 0.5;
   const jitter = (hash(`${trackKey(seed)}|${trackKey(track)}|${agent}`) % 90) / 1000;
-  return Math.round(Math.min(0.98, base + jitter) * 1000) / 1000;
+  return Math.round(Math.min(0.98, base + clampedScore * 0.32 + jitter) * 1000) / 1000;
 }
 
 function genreAffinity(a?: string, b?: string): number {
   if (!a || !b) return 0.32;
   if (a === b) return 1;
-  if ((RELATED_GENRES[a] ?? []).includes(b) || (RELATED_GENRES[b] ?? []).includes(a)) return 0.68;
+  if ((STREAMING_RELATED_GENRES[a] ?? []).includes(b) || (STREAMING_RELATED_GENRES[b] ?? []).includes(a)) return 0.68;
   return 0.28;
 }
 
@@ -138,24 +137,32 @@ function childLimit(numSeeds: number): number {
 }
 
 function exactCatalogMatch(track: StreamingTrack): DiscoveryTrack | undefined {
-  const key = trackKey(track);
-  return (
-    DISCOVERY_CATALOG.find((candidate) => trackKey(candidate) === key) ||
-    exactFamiliarLandmark(track)
-  );
+  return exactDiscoveryTrack(track);
 }
 
-function ranked(pool: DiscoveryTrack[], basis: string): DiscoveryTrack[] {
-  const seed = hash(basis);
-  return [...pool].sort((a, b) => ((hash(trackKey(a)) ^ seed) >>> 0) - ((hash(trackKey(b)) ^ seed) >>> 0));
+function agentForMatch(match: DiscoveryCandidateScore, familiar: boolean): RecommendationAgent {
+  if (familiar) return "familiar seed";
+  if (match.candidateGenre === match.seedGenre) return "genre agent";
+  if ((STREAMING_RELATED_GENRES[match.seedGenre] ?? []).includes(match.candidateGenre) && match.tagOverlap >= 0.16) {
+    return "bridge agent";
+  }
+  return "diversity agent";
 }
 
-function takeFromPool(
-  pool: DiscoveryTrack[],
-  used: Set<string>,
-  basis: string,
-): DiscoveryTrack | null {
-  return ranked(pool, basis).find((track) => !used.has(trackKey(track))) ?? null;
+function recommendationSummary(seed: StreamingTrack, pick: PickedTrack, child = false): string {
+  const from = `${seed.artist} - ${seed.title}`;
+  const prefix = child ? "Branch" : "Recommendation";
+  if (pick.agent === "familiar seed") {
+    return `Familiar landmark near ${from}: ${pick.track.why}.`;
+  }
+  if (pick.agent === "genre agent") {
+    return `${prefix} from the same ${pick.match.seedGenre.toLowerCase()} lane as ${from}: ${pick.track.why}.`;
+  }
+  if (pick.agent === "bridge agent") {
+    const shared = pick.match.sharedTags.slice(0, 2).join(" + ");
+    return `${prefix} bridging ${from} through ${shared || pick.match.candidateGenre.toLowerCase()}: ${pick.track.why}.`;
+  }
+  return `${prefix} with a weaker but still connected jump from ${from}: ${pick.track.why}.`;
 }
 
 function pickTracks(
@@ -166,48 +173,66 @@ function pickTracks(
   allowFamiliar: boolean,
 ): PickedTrack[] {
   const seedGenre = exactCatalogMatch(seed)?.genre ?? inferStreamingGenre(seed);
-  const related = new Set(RELATED_GENRES[seedGenre] ?? []);
-  const familiarPool = FAMILIAR_LANDMARKS.filter(
-    (track) => track.genre === seedGenre || related.has(track.genre),
-  );
-  const familiarSlot = allowFamiliar && familiarPool.length && count >= 3 ? Math.min(1, count - 1) : -1;
-  const pools: { agent: RecommendationAgent; tracks: DiscoveryTrack[] }[] = [
-    {
-      agent: "genre agent",
-      tracks: DISCOVERY_CATALOG.filter((track) => track.genre === seedGenre),
-    },
-    {
-      agent: "bridge agent",
-      tracks: DISCOVERY_CATALOG.filter((track) => related.has(track.genre)),
-    },
-    {
-      agent: "diversity agent",
-      tracks: DISCOVERY_CATALOG.filter((track) => track.genre !== seedGenre && !related.has(track.genre)),
-    },
+  const related = new Set(STREAMING_RELATED_GENRES[seedGenre] ?? []);
+  const pool = [
+    ...DISCOVERY_CATALOG.map((track) => ({ track, familiar: false })),
+    ...(allowFamiliar ? FAMILIAR_LANDMARKS.map((track) => ({ track, familiar: true })) : []),
   ];
+  const ranked = pool
+    .filter(({ track }) => !used.has(trackKey(track)))
+    .map(({ track, familiar }) => {
+      const match = scoreDiscoveryCandidate(seed, track);
+      const agent = agentForMatch(match, familiar);
+      const bridgePenalty = agent === "bridge agent" && !related.has(match.candidateGenre) ? 0.18 : 0;
+      const diversityPenalty = agent === "diversity agent" ? 0.18 : 0;
+      return {
+        track,
+        familiar,
+        agent,
+        match: {
+          ...match,
+          score: match.score - bridgePenalty - diversityPenalty,
+        },
+      };
+    })
+    .filter(({ agent, match }) => {
+      if (agent === "diversity agent") return match.score >= 0.14 && match.tagOverlap >= 0.12;
+      if (agent === "bridge agent") return match.score >= 0.16 && match.tagOverlap >= 0.16;
+      return match.score >= 0.04;
+    })
+    .sort((a, b) => {
+      const scoreDelta = b.match.score - a.match.score;
+      if (Math.abs(scoreDelta) > 0.001) return scoreDelta;
+      return ((hash(`${basis}|${trackKey(a.track)}`) >>> 0) - (hash(`${basis}|${trackKey(b.track)}`) >>> 0));
+    });
+  const scoreSeed = ranked.some(({ match }) => match.seedIsScore);
+  const ordered = scoreSeed
+    ? [
+        ...ranked.filter(({ match }) => match.candidateIsScore),
+        ...ranked.filter(({ match }) => !match.candidateIsScore),
+      ]
+    : ranked;
   const picks: PickedTrack[] = [];
 
-  for (let i = 0; i < count; i++) {
-    if (i === familiarSlot) {
-      const familiar = takeFromPool(familiarPool, used, `${basis}|familiar landmark`);
-      if (familiar) {
-        used.add(trackKey(familiar));
-        picks.push({ track: familiar, agent: "familiar seed" });
-        continue;
-      }
+  for (const pick of ordered) {
+    if (picks.length >= count) break;
+    if (pick.familiar && picks.some((candidate) => candidate.agent === "familiar seed")) continue;
+    if (scoreSeed && picks.length < Math.min(4, count) && !pick.match.candidateIsScore) continue;
+    if (pick.agent === "diversity agent" && picks.length < Math.min(2, count)) continue;
+    used.add(trackKey(pick.track));
+    picks.push({ track: pick.track, agent: pick.agent, match: pick.match });
+  }
+
+  if (picks.length < count) {
+    const fallback = DISCOVERY_CATALOG
+      .filter((track) => !used.has(trackKey(track)) && (track.genre === seedGenre || related.has(track.genre)))
+      .map((track) => ({ track, match: scoreDiscoveryCandidate(seed, track) }))
+      .sort((a, b) => b.match.score - a.match.score || trackKey(a.track).localeCompare(trackKey(b.track)));
+    for (const { track, match } of fallback) {
+      if (picks.length >= count) break;
+      used.add(trackKey(track));
+      picks.push({ track, agent: agentForMatch(match, false), match });
     }
-    const agentOrder = [pools[i % pools.length]!, pools[(i + 1) % pools.length]!, pools[(i + 2) % pools.length]!];
-    let picked: PickedTrack | null = null;
-    for (const pool of agentOrder) {
-      const track = takeFromPool(pool.tracks, used, `${basis}|${pool.agent}|${i}`);
-      if (track) {
-        picked = { track, agent: pool.agent };
-        break;
-      }
-    }
-    if (!picked) break;
-    used.add(trackKey(picked.track));
-    picks.push(picked);
   }
 
   return picks;
@@ -275,19 +300,16 @@ export async function buildStreamingTreeStatic(body: {
         title: pick.track.title,
         artist: pick.track.artist,
         type: pick.agent === "familiar seed" ? "seed" : "ai_recommendation",
-        confidence: confidence(seed, pick.track, pick.agent),
+        confidence: confidence(seed, pick.track, pick.agent, pick.match.score),
         genre_bucket: pick.track.genre,
-        why_summary:
-          pick.agent === "familiar seed"
-            ? `Familiar landmark seed near ${seed.artist} - ${seed.title}: ${pick.track.why}.`
-            : `${pick.agent} matched ${seed.artist} - ${seed.title}: ${pick.track.why}.`,
+        why_summary: recommendationSummary(seed, pick),
         why_details: [],
         identifiers: {},
       });
       edges.push({
         source: seedNode.id,
         target: nodeId,
-        weight: confidence(seed, pick.track, pick.agent),
+        weight: confidence(seed, pick.track, pick.agent, pick.match.score),
         kind: "trunk",
       });
 
@@ -300,19 +322,16 @@ export async function buildStreamingTreeStatic(body: {
           title: child.track.title,
           artist: child.track.artist,
           type: child.agent === "familiar seed" ? "seed" : "ai_recommendation",
-          confidence: confidence(pick.track, child.track, child.agent),
+          confidence: confidence(pick.track, child.track, child.agent, child.match.score),
           genre_bucket: child.track.genre,
-          why_summary:
-            child.agent === "familiar seed"
-              ? `Familiar landmark seed near ${pick.track.artist} - ${pick.track.title}: ${child.track.why}.`
-              : `${child.agent} branches from ${pick.track.artist} - ${pick.track.title}: ${child.track.why}.`,
+          why_summary: recommendationSummary(pick.track, child, true),
           why_details: [],
           identifiers: {},
         });
         edges.push({
           source: nodeId,
           target: childId,
-          weight: confidence(pick.track, child.track, child.agent),
+          weight: confidence(pick.track, child.track, child.agent, child.match.score),
         });
       }
     }

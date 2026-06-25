@@ -1,8 +1,10 @@
 import {
   DISCOVERY_CATALOG,
   FAMILIAR_LANDMARKS,
+  STREAMING_RELATED_GENRES,
   exactFamiliarLandmark,
   inferStreamingGenre,
+  scoreDiscoveryCandidate,
   type DiscoveryTrack,
   type StreamingTrack,
 } from "./streaming";
@@ -27,17 +29,6 @@ export interface PlaylistRadio {
   genreCounts: { genre: string; count: number }[];
   title: string;
 }
-
-const BRIDGES: Record<string, string[]> = {
-  Rock: ["Experimental", "Electronic", "Pop"],
-  Experimental: ["Rock", "Electronic", "Instrumental", "Hip-Hop"],
-  Instrumental: ["Electronic", "Folk", "Experimental"],
-  Folk: ["Pop", "Instrumental", "International"],
-  Electronic: ["Experimental", "Pop", "Instrumental", "Hip-Hop"],
-  Pop: ["Electronic", "Folk", "Rock"],
-  "Hip-Hop": ["Electronic", "Experimental", "Pop"],
-  International: ["Folk", "Electronic", "Experimental"],
-};
 
 const UNIQUE_GENRE_BONUS: Record<string, number> = {
   Experimental: 0.18,
@@ -127,8 +118,18 @@ function takeCatalogTrack(
   pool: DiscoveryTrack[],
   used: Set<string>,
   basis: string,
+  sourceSeeds: StreamingTrack[] = [],
 ): DiscoveryTrack | null {
-  return rankedCatalog(pool, basis).find((track) => !used.has(key(track))) ?? null;
+  if (!sourceSeeds.length) return rankedCatalog(pool, basis).find((track) => !used.has(key(track))) ?? null;
+  const ranked = pool
+    .filter((track) => !used.has(key(track)))
+    .map((track) => ({
+      track,
+      score: Math.max(...sourceSeeds.map((seed) => scoreDiscoveryCandidate(seed, track).score)),
+    }))
+    .filter(({ score }) => score > 0.06)
+    .sort((a, b) => b.score - a.score || ((hash(`${basis}|${key(a.track)}`) >>> 0) - (hash(`${basis}|${key(b.track)}`) >>> 0)));
+  return ranked[0]?.track ?? null;
 }
 
 function asRadioTrack(track: DiscoveryTrack, role: RadioTrack["role"], basis: string): RadioTrack {
@@ -156,10 +157,11 @@ function takeFamiliarLandmark(
   genre: string,
   used: Set<string>,
   basis: string,
+  sourceSeeds: StreamingTrack[] = [],
 ): DiscoveryTrack | null {
-  const bridgeGenres = BRIDGES[genre] ?? [];
+  const bridgeGenres = STREAMING_RELATED_GENRES[genre] ?? [];
   const pool = FAMILIAR_LANDMARKS.filter((track) => track.genre === genre || bridgeGenres.includes(track.genre));
-  return takeCatalogTrack(pool, used, `${basis}|familiar landmark`);
+  return takeCatalogTrack(pool, used, `${basis}|familiar landmark`, sourceSeeds);
 }
 
 function genreCountsFor(tracks: RadioTrack[]): { genre: string; count: number }[] {
@@ -219,7 +221,9 @@ export function buildPlaylistRadio(
   let guard = 0;
   while (output.length < targetLength && guard < targetLength * 3) {
     const genre = dominantGenres[guard % Math.max(dominantGenres.length, 1)] ?? "Pop";
-    const bridgeGenres = BRIDGES[genre] ?? [];
+    const bridgeGenres = STREAMING_RELATED_GENRES[genre] ?? [];
+    const sourceBasis = scoredSeeds.filter((track) => track.genre === genre).slice(0, 10);
+    const matchSeeds = sourceBasis.length ? sourceBasis : scoredSeeds.slice(0, 10);
     const pools: { role: RadioTrack["role"]; tracks: DiscoveryTrack[] }[] = [
       { role: "genre discovery", tracks: DISCOVERY_CATALOG.filter((track) => track.genre === genre) },
       { role: "bridge discovery", tracks: DISCOVERY_CATALOG.filter((track) => bridgeGenres.includes(track.genre)) },
@@ -231,14 +235,14 @@ export function buildPlaylistRadio(
 
     for (const pool of pools) {
       if (output.length >= targetLength) break;
-      const picked = takeCatalogTrack(pool.tracks, used, `${genre}|${pool.role}|${guard}|${sourceTracks.length}`);
+      const picked = takeCatalogTrack(pool.tracks, used, `${genre}|${pool.role}|${guard}|${sourceTracks.length}`, matchSeeds);
       if (!picked) continue;
       used.add(key(picked));
       output.push(asRadioTrack(picked, pool.role, `${genre}|${pool.role}|${guard}`));
     }
 
     if (familiarCount < familiarBudget && output.length >= 7 && output.length < targetLength && guard % 3 === 1) {
-      const familiar = takeFamiliarLandmark(genre, used, `${genre}|${guard}|${sourceTracks.length}`);
+      const familiar = takeFamiliarLandmark(genre, used, `${genre}|${guard}|${sourceTracks.length}`, matchSeeds);
       if (familiar) {
         used.add(key(familiar));
         output.push(asRadioTrack(familiar, "familiar seed", `${genre}|familiar|${guard}`));

@@ -214,6 +214,29 @@ export const FAMILIAR_LANDMARKS: DiscoveryTrack[] = [
   ...EXTRA_FAMILIAR_LANDMARKS,
 ];
 
+export const STREAMING_RELATED_GENRES: Record<string, string[]> = {
+  Rock: ["Experimental", "Pop"],
+  Experimental: ["Rock", "Electronic", "Instrumental"],
+  Instrumental: ["Electronic", "Experimental", "Folk"],
+  Folk: ["Pop", "Instrumental", "Rock"],
+  Electronic: ["Instrumental", "Experimental", "Pop"],
+  Pop: ["Electronic", "Folk", "Rock"],
+  "Hip-Hop": ["Experimental", "Electronic", "Pop"],
+  International: ["Folk", "Electronic", "Pop"],
+};
+
+export interface DiscoveryCandidateScore {
+  score: number;
+  tagOverlap: number;
+  seedGenre: string;
+  candidateGenre: string;
+  sharedTags: string[];
+  seedTags: string[];
+  candidateTags: string[];
+  seedIsScore: boolean;
+  candidateIsScore: boolean;
+}
+
 function clean(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -229,6 +252,14 @@ export function streamingTrackKey(track: Pick<StreamingTrack, "artist" | "title"
 export function exactFamiliarLandmark(track: Pick<StreamingTrack, "artist" | "title">): DiscoveryTrack | undefined {
   const key = streamingTrackKey(track);
   return FAMILIAR_LANDMARKS.find((candidate) => streamingTrackKey(candidate) === key);
+}
+
+export function exactDiscoveryTrack(track: Pick<StreamingTrack, "artist" | "title">): DiscoveryTrack | undefined {
+  const key = streamingTrackKey(track);
+  return (
+    DISCOVERY_CATALOG.find((candidate) => streamingTrackKey(candidate) === key) ||
+    exactFamiliarLandmark(track)
+  );
 }
 
 function hash(value: string): number {
@@ -271,7 +302,10 @@ export function parseTrackLines(text: string, source: StreamingTrack["source"] =
 export function inferStreamingGenre(track: StreamingTrack): string {
   const q = `${track.artist} ${track.title} ${track.album ?? ""}`.toLowerCase();
   if (/hip.?hop|rap|dilla|doom|tribe|nujabes|kendrick|jpegmafia|madvillain|outkast|missy|eminem|drake/.test(q)) return "Hip-Hop";
-  if (/ambient|eno|grouper|basinski|hecker|stars of the lid|instrumental|drone|hans zimmer|miles davis|jazz/.test(q)) {
+  if (
+    /ambient|eno|grouper|basinski|hecker|stars of the lid|instrumental|drone|hans zimmer|miles davis|jazz/.test(q) ||
+    /\b(?:soundtrack|score|ost|tron|son of flynn|end of line|derezzed|solar sailer|cinematic)\b/.test(q)
+  ) {
     return "Instrumental";
   }
   if (/house|techno|burial|bicep|overmono|four tet|floating points|caribou|stussy|fred again|aphex|boards|electronic|dj |daft punk|gorillaz|avicii/.test(q)) {
@@ -283,6 +317,184 @@ export function inferStreamingGenre(track: StreamingTrack): string {
     return "Rock";
   }
   return "Pop";
+}
+
+const STYLE_PATTERNS: { tag: string; pattern: RegExp }[] = [
+  { tag: "soundtrack", pattern: /\b(?:soundtrack|score|ost|tron|flynn|derezzed|solar sailer|end of line)\b/ },
+  { tag: "cinematic", pattern: /\b(?:cinematic|orchestral|strings|film|score|sprawl|ascent|crescendo)\b/ },
+  { tag: "ambient", pattern: /\b(?:ambient|drone|weightless|hush|stillness|glow|meditation|minimal)\b/ },
+  { tag: "instrumental", pattern: /\b(?:instrumental|piano|synth instrumental|jazz|post-rock|chamber)\b/ },
+  { tag: "synth", pattern: /\b(?:synth|electronic|idm|modular|chrome|neon|french-touch|electro)\b/ },
+  { tag: "club", pattern: /\b(?:club|house|techno|rave|garage|dance-floor|warehouse|deep-house)\b/ },
+  { tag: "breakbeat", pattern: /\b(?:breakbeat|big-beat|uk club|garage|rubbery)\b/ },
+  { tag: "downtempo", pattern: /\b(?:downtempo|trip-hop|post-club|late-night|dusty)\b/ },
+  { tag: "guitar", pattern: /\b(?:guitar|grunge|shoegaze|post-punk|indie-rock|alt-rock|slacker)\b/ },
+  { tag: "post-punk", pattern: /\b(?:post-punk|goth|darkwave|coldwave|nervous|angular)\b/ },
+  { tag: "punk", pattern: /\b(?:punk|abrasive|hardcore|detonation|red-line|snarling)\b/ },
+  { tag: "folk", pattern: /\b(?:folk|acoustic|country|americana|fingerpicked|pastoral|roots)\b/ },
+  { tag: "songwriter", pattern: /\b(?:songwriting|plainspoken|close-mic|confession|storytelling|intimacy)\b/ },
+  { tag: "slacker", pattern: /\b(?:slacker|daylight|laid-back|loose|homespun)\b/ },
+  { tag: "dream", pattern: /\b(?:dream|hazy|shoegaze|melancholy|nostalgia|sunset|blue-lit)\b/ },
+  { tag: "sad", pattern: /\b(?:sad|grief|ache|sorrow|lonely|melancholy|longing|regret)\b/ },
+  { tag: "bright", pattern: /\b(?:bright|euphoria|sunlit|daylight|celebration|lift|glossy)\b/ },
+  { tag: "hip-hop", pattern: /\b(?:hip.?hop|rap|boom-bap|jazz-rap|lyrical|flow|sample)\b/ },
+  { tag: "soul", pattern: /\b(?:soul|r&b|funk|groove|disco|highlife)\b/ },
+  { tag: "global", pattern: /\b(?:afro|latin|reggae|flamenco|desert|samba|cumbia|mpb|reggaeton|global)\b/ },
+  { tag: "experimental", pattern: /\b(?:experimental|art-pop|avant|mutating|fractured|collage|noise|glitch|oddity)\b/ },
+  { tag: "psych", pattern: /\b(?:psych|psychedelic|krautrock|trance|ritual)\b/ },
+];
+
+const ARTIST_TAGS: { pattern: RegExp; tags: string[] }[] = [
+  { pattern: /daft punk/, tags: ["synth", "electronic", "french-touch"] },
+  { pattern: /kurt vile|pavement|yo la tengo|courtney barnett/, tags: ["slacker", "guitar", "indie-rock"] },
+  { pattern: /new order|joy division|the cure|depeche mode|molchat doma|bauhaus/, tags: ["post-punk", "synth", "sad"] },
+  { pattern: /burial|boards of canada|aphex twin|four tet|floating points|oneohtrix|tycho|kiasmos/, tags: ["synth", "ambient", "downtempo"] },
+  { pattern: /bicep|overmono|fred again|chris stussy|mall grab|lane 8|ben bohmer/, tags: ["club", "electronic"] },
+  { pattern: /grouper|brian eno|tim hecker|basinski|stars of the lid|nils frahm|max richter/, tags: ["ambient", "instrumental", "cinematic"] },
+  { pattern: /vangelis|cliff martinez|trent reznor|atticus ross|disasterpeace|mica levi|clint mansell/, tags: ["soundtrack", "cinematic", "instrumental", "synth"] },
+  { pattern: /daniel lopatin|lorn/, tags: ["soundtrack", "cinematic", "synth"] },
+  { pattern: /mf doom|j dilla|nujabes|a tribe called quest|kendrick|madlib|madvillain/, tags: ["hip-hop", "sample"] },
+  { pattern: /big thief|adrianne lenker|sufjan|nick drake|elliott smith|bon iver/, tags: ["folk", "songwriter", "sad"] },
+  { pattern: /fela|tinariwen|mdou moctar|rosalia|bad bunny|bomba estereo|khruangbin/, tags: ["global", "groove"] },
+];
+
+const TAG_WEIGHTS: Record<string, number> = {
+  soundtrack: 1.25,
+  cinematic: 1.12,
+  ambient: 1.02,
+  instrumental: 0.98,
+  synth: 0.92,
+  club: 0.9,
+  guitar: 0.88,
+  "post-punk": 0.94,
+  folk: 0.9,
+  "hip-hop": 0.92,
+  global: 0.88,
+  experimental: 0.86,
+  slacker: 1,
+  songwriter: 0.82,
+  dream: 0.78,
+  sad: 0.72,
+  bright: 0.58,
+  electronic: 0.42,
+  pop: 0.34,
+  rock: 0.38,
+};
+
+function tagWeight(tag: string): number {
+  return TAG_WEIGHTS[tag] ?? 0.7;
+}
+
+export function styleTagsForTrack(
+  track: Pick<StreamingTrack, "artist" | "title" | "album"> & { genre?: string; why?: string },
+  options: { genre?: string; why?: string } = {},
+): Set<string> {
+  const genre = options.genre ?? track.genre ?? inferStreamingGenre(track);
+  const descriptorText = `${track.title} ${track.album ?? ""} ${genre} ${options.why ?? track.why ?? ""}`.toLowerCase();
+  const text = `${track.artist} ${descriptorText}`.toLowerCase();
+  const tags = new Set<string>([genre.toLowerCase()]);
+
+  for (const { pattern, tags: artistTags } of ARTIST_TAGS) {
+    if (pattern.test(text)) for (const tag of artistTags) tags.add(tag);
+  }
+  for (const { tag, pattern } of STYLE_PATTERNS) {
+    if (pattern.test(descriptorText)) tags.add(tag);
+  }
+  if (/\b(?:son of flynn|tron|end of line|derezzed|solar sailer)\b/.test(descriptorText)) {
+    tags.add("soundtrack");
+    tags.add("cinematic");
+    tags.add("instrumental");
+    tags.add("synth");
+  }
+  return tags;
+}
+
+function weightedOverlap(a: Set<string>, b: Set<string>): { score: number; sharedTags: string[] } {
+  let intersection = 0;
+  let aTotal = 0;
+  let bTotal = 0;
+  const sharedTags: string[] = [];
+  for (const tag of a) aTotal += tagWeight(tag);
+  for (const tag of b) bTotal += tagWeight(tag);
+  for (const tag of a) {
+    if (!b.has(tag)) continue;
+    intersection += tagWeight(tag);
+    sharedTags.push(tag);
+  }
+  return {
+    score: intersection / Math.sqrt(Math.max(0.001, aTotal * bTotal)),
+    sharedTags: sharedTags.sort((x, y) => tagWeight(y) - tagWeight(x)),
+  };
+}
+
+function genreScore(seedGenre: string, candidateGenre: string): number {
+  if (seedGenre === candidateGenre) return 0.24;
+  if ((STREAMING_RELATED_GENRES[seedGenre] ?? []).includes(candidateGenre)) return 0.08;
+  return -0.16;
+}
+
+export function scoreDiscoveryCandidate(
+  seed: StreamingTrack,
+  candidate: DiscoveryTrack,
+): DiscoveryCandidateScore {
+  const seedReference = exactDiscoveryTrack(seed);
+  const seedGenre = seedReference?.genre ?? inferStreamingGenre(seed);
+  const candidateGenre = candidate.genre;
+  const seedTags = styleTagsForTrack(seed, { genre: seedGenre, why: seedReference?.why });
+  const candidateTags = styleTagsForTrack(candidate, { genre: candidateGenre, why: candidate.why });
+  const overlap = weightedOverlap(seedTags, candidateTags);
+  const sameArtist = clean(seed.artist).toLowerCase() === clean(candidate.artist).toLowerCase();
+  const isExactTrack = streamingTrackKey(seed) === streamingTrackKey(candidate);
+  const seedIsScore = seedTags.has("soundtrack") || seedTags.has("cinematic");
+  const candidateIsScore =
+    candidateTags.has("soundtrack") ||
+    candidateTags.has("cinematic") ||
+    candidateTags.has("ambient") ||
+    candidateTags.has("instrumental");
+  const candidateIsClubOnly =
+    candidateTags.has("club") &&
+    !candidateTags.has("soundtrack") &&
+    !candidateTags.has("cinematic") &&
+    !candidateTags.has("ambient") &&
+    !candidateTags.has("instrumental");
+  const candidateIsGuitarSong = candidateTags.has("slacker") || candidateTags.has("folk") || candidateTags.has("guitar");
+  const candidateSupportsScore =
+    candidateTags.has("soundtrack") ||
+    candidateTags.has("cinematic") ||
+    candidateTags.has("ambient") ||
+    candidateTags.has("instrumental") ||
+    candidateTags.has("synth");
+  const clashPenalty = seedIsScore && candidateIsGuitarSong && !candidateSupportsScore ? 0.42 : 0;
+  const clubPenalty = seedIsScore && candidateIsClubOnly ? 0.3 : 0;
+  const scoreMismatchPenalty = seedIsScore && !candidateIsScore ? 0.36 : 0;
+  const scoreBonus = seedIsScore && candidateIsScore ? 0.28 : 0;
+  const sameArtistPenalty = sameArtist ? 0.18 : 0;
+  const exactPenalty = isExactTrack ? 1 : 0;
+  const familiarityPenalty = candidate.familiarity === "mainstream" ? 0.06 : 0;
+  const jitter = (hash(`${streamingTrackKey(seed)}|${streamingTrackKey(candidate)}|sound-score`) % 40) / 1000;
+  const score =
+    genreScore(seedGenre, candidateGenre) +
+    overlap.score * 0.82 +
+    scoreBonus +
+    jitter -
+    sameArtistPenalty -
+    clashPenalty -
+    clubPenalty -
+    scoreMismatchPenalty -
+    familiarityPenalty -
+    exactPenalty;
+
+  return {
+    score: Math.round(score * 1000) / 1000,
+    tagOverlap: Math.round(overlap.score * 1000) / 1000,
+    seedGenre,
+    candidateGenre,
+    sharedTags: overlap.sharedTags,
+    seedTags: [...seedTags].sort((a, b) => tagWeight(b) - tagWeight(a)),
+    candidateTags: [...candidateTags].sort((a, b) => tagWeight(b) - tagWeight(a)),
+    seedIsScore,
+    candidateIsScore,
+  };
 }
 
 export function analyzeStreamingTracks(tracks: StreamingTrack[]): GenreAnalysis[] {
@@ -297,11 +509,15 @@ export function analyzeStreamingTracks(tracks: StreamingTrack[]): GenreAnalysis[
     .map(([genre, genreTracks]) => {
       const motif = motifForGenre(genre);
       const existing = new Set(genreTracks.map(dedupeKey));
-      const seed = hash(genreTracks.map(dedupeKey).join("|") || genre);
-      const recommendations = DISCOVERY_CATALOG.filter(
-        (track) => track.genre === genre && !existing.has(dedupeKey(track)),
-      )
-        .sort((a, b) => ((hash(dedupeKey(a)) ^ seed) >>> 0) - ((hash(dedupeKey(b)) ^ seed) >>> 0))
+      const recommendations = DISCOVERY_CATALOG
+        .filter((track) => !existing.has(dedupeKey(track)))
+        .map((track) => ({
+          track,
+          score: Math.max(...genreTracks.map((seed) => scoreDiscoveryCandidate(seed, track).score)),
+        }))
+        .filter(({ score }) => score > 0.08)
+        .sort((a, b) => b.score - a.score || dedupeKey(a.track).localeCompare(dedupeKey(b.track)))
+        .map(({ track }) => track)
         .slice(0, 8);
       return {
         genre,
