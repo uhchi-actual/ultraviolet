@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { motifForGenre } from "@/lib/genreMotifs";
 import { buildPlaylistRadio, radioToSeedText } from "@/lib/playlistRadio";
 import {
   analyzeStreamingTracks,
@@ -29,7 +30,6 @@ import {
   storeYouTubeClientId,
   type YouTubeExportResult,
 } from "@/lib/youtube";
-import { motifForGenre } from "@/lib/genreMotifs";
 
 const STARTER_ROTATION =
   "New Order - Ceremony\nThe Cure - Plainsong\nMetallica - Nothing Else Matters\nFred again.. - Delilah\nBicep - Glue\nKurt Vile - Pretty Pimpin\nGrouper - Heavy Water/I'd Rather Be Sleeping\nMF DOOM - Doomsday\nFontaines D.C. - Starburster\nBig Thief - Simulation Swarm";
@@ -52,11 +52,7 @@ function linkRow(track: StreamingTrack | DiscoveryTrack) {
   );
 }
 
-export function StreamingSourcesPanel({
-  onBuild,
-}: {
-  onBuild: (text: string) => void;
-}) {
+export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => void }) {
   const [pasteText, setPasteText] = useState(STARTER_ROTATION);
   const [clientId, setClientId] = useState("");
   const [spotifyPlaylistUrl, setSpotifyPlaylistUrl] = useState("");
@@ -198,8 +194,8 @@ export function StreamingSourcesPanel({
   }
 
   return (
-    <section className="mb-5 rounded-xl border border-uv-border bg-uv-bg-surface/55 p-4 backdrop-blur-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="mb-5 overflow-hidden rounded-xl border border-uv-border bg-uv-bg-surface/55 backdrop-blur-sm">
+      <header className="flex flex-wrap items-start justify-between gap-3 px-4 py-4">
         <div>
           <h2 className="font-display text-lg font-semibold text-uv-text-primary">Source analysis</h2>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -226,10 +222,10 @@ export function StreamingSourcesPanel({
             Generate tree
           </button>
         </div>
-      </div>
+      </header>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div>
+      <div className="grid gap-4 border-t border-uv-border/70 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0">
           <textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
@@ -237,56 +233,53 @@ export function StreamingSourcesPanel({
             className="w-full rounded-lg border border-uv-border bg-uv-bg-elevated px-3 py-2 font-mono text-sm text-uv-text-primary"
             placeholder={"Artist - Title\nSpotify copied rows also work: Title\tArtist\tAlbum"}
           />
-          <p className="mt-2 text-xs text-uv-text-muted">
-            Paste plain tracks or copied Spotify table rows. Playlist links use Spotify OAuth.
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {analysis.slice(0, 3).map((group) => (
-              <div key={group.genre} className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
-                  {group.genre} / {group.mood}
-                </p>
-                <p className="mt-1 text-2xl font-semibold text-uv-text-primary">{group.count}</p>
-                <p className="mt-1 truncate text-xs text-uv-text-secondary">
-                  {group.tracks.slice(0, 2).map((track) => track.artist).join(", ")}
-                </p>
-              </div>
-            ))}
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-uv-text-muted">
+            <span>Paste tracks, copied Spotify rows, or import a playlist link.</span>
+            {analysis.slice(0, 6).map((group) => {
+              const motif = motifForGenre(group.genre);
+              return (
+                <span
+                  key={group.genre}
+                  className="inline-flex rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em]"
+                  style={{ borderColor: motif.primary, color: motif.primary }}
+                >
+                  {group.genre} {group.count}
+                </span>
+              );
+            })}
           </div>
         </div>
 
-        <aside className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
-          <div className="mb-3">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="font-display text-sm font-semibold text-uv-text-primary">Spotify import</h3>
-              <span className="rounded-md border border-uv-border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-uv-text-muted">
-                PKCE
-              </span>
-            </div>
-            {redirectUri ? (
-              <div className="mt-2 rounded-md border border-uv-border bg-uv-bg-elevated/70 p-2">
-                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-uv-text-muted">
-                  Redirect URI
-                </p>
-                <div className="mt-1 flex gap-2">
-                  <code className="min-w-0 flex-1 truncate text-[11px] text-uv-text-secondary">
-                    {redirectUri}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={copyRedirectUri}
-                    className="shrink-0 rounded-md border border-uv-border bg-uv-bg-primary px-2 py-1 text-[11px] text-uv-text-primary transition hover:border-uv-purple-bright"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-            ) : null}
-            <p className="mt-2 text-xs text-uv-text-muted">
-              Add that exact URI in Spotify. Existing apps will reject any slash or host mismatch.
-            </p>
+        <div className="min-w-0 lg:border-l lg:border-uv-border/70 lg:pl-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-display text-sm font-semibold text-uv-text-primary">Spotify import</h3>
+            <span className="rounded-md border border-uv-border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-uv-text-muted">
+              PKCE
+            </span>
           </div>
-          <div className="flex gap-2">
+          {redirectUri ? (
+            <div className="mt-2 rounded-md bg-uv-bg-primary/45 p-2">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-uv-text-muted">
+                Redirect URI
+              </p>
+              <div className="mt-1 flex gap-2">
+                <code className="min-w-0 flex-1 truncate text-[11px] text-uv-text-secondary">
+                  {redirectUri}
+                </code>
+                <button
+                  type="button"
+                  onClick={copyRedirectUri}
+                  className="shrink-0 rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-1 text-[11px] text-uv-text-primary transition hover:border-uv-purple-bright"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          ) : null}
+          <p className="mt-2 text-xs text-uv-text-muted">
+            Add that exact URI in Spotify. Any slash or host mismatch will fail.
+          </p>
+          <div className="mt-3 flex gap-2">
             <input
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
@@ -301,20 +294,12 @@ export function StreamingSourcesPanel({
               Connect
             </button>
           </div>
-          <button
-            type="button"
-            onClick={loadPlaylists}
-            disabled={loading}
-            className="mt-2 w-full rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright disabled:opacity-50"
-          >
-            {loading ? "Loading..." : "Load Spotify playlists"}
-          </button>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
             <input
               value={spotifyPlaylistUrl}
               onChange={(e) => setSpotifyPlaylistUrl(e.target.value)}
               placeholder="Spotify playlist link"
-              className="min-w-0 flex-1 rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
+              className="min-w-0 rounded-md border border-uv-border bg-uv-bg-elevated px-2 py-2 text-xs text-uv-text-primary placeholder:text-uv-text-muted"
             />
             <button
               type="button"
@@ -325,6 +310,14 @@ export function StreamingSourcesPanel({
               Import
             </button>
           </div>
+          <button
+            type="button"
+            onClick={loadPlaylists}
+            disabled={loading}
+            className="mt-2 w-full rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-xs text-uv-text-primary transition hover:border-uv-purple-bright disabled:opacity-50"
+          >
+            {loading ? "Loading..." : "Load Spotify playlists"}
+          </button>
           {status ? <p className="mt-2 text-xs text-uv-text-secondary">{status}</p> : null}
           {playlists.length ? (
             <div className="mt-3 max-h-44 space-y-2 overflow-auto pr-1">
@@ -333,7 +326,7 @@ export function StreamingSourcesPanel({
                   key={playlist.id}
                   type="button"
                   onClick={() => loadPlaylist(playlist.id)}
-                  className="block w-full rounded-md border border-uv-border bg-uv-bg-elevated px-3 py-2 text-left text-xs transition hover:border-uv-purple-bright"
+                  className="block w-full rounded-md bg-uv-bg-primary/45 px-3 py-2 text-left text-xs transition hover:bg-uv-bg-elevated"
                 >
                   <span className="block truncate text-uv-text-primary">{playlist.name}</span>
                   <span className="text-uv-text-muted">{playlist.tracksTotal.toLocaleString()} tracks</span>
@@ -341,60 +334,79 @@ export function StreamingSourcesPanel({
               ))}
             </div>
           ) : null}
-        </aside>
+        </div>
       </div>
 
       {analysis.length ? (
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {analysis.slice(0, 6).map((group) => (
-            <div key={group.genre} className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
-                {group.genre} recommendations
-              </p>
-              <div className="mt-2 space-y-3">
-                {group.recommendations.slice(0, 2).map((track) => (
-                  <div key={`${track.artist}-${track.title}`}>
-                    <p className="truncate text-sm font-medium text-uv-text-primary">
-                      {track.title} <span className="text-uv-text-secondary">- {track.artist}</span>
-                    </p>
-                    <p className="text-xs text-uv-text-muted">{track.why}</p>
-                    {linkRow(track)}
+        <div className="border-t border-uv-border/70 px-4 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-display text-sm font-semibold text-uv-text-primary">Recommendations</h3>
+            <p className="text-xs text-uv-text-muted">Closest genre bridges from the current source list.</p>
+          </div>
+          <div className="mt-3 grid gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
+            {analysis.slice(0, 6).map((group) => {
+              const motif = motifForGenre(group.genre);
+              return (
+                <div key={group.genre} className="min-w-0">
+                  <p
+                    className="font-mono text-[10px] uppercase tracking-[0.18em]"
+                    style={{ color: motif.primary }}
+                  >
+                    {group.genre}
+                  </p>
+                  <div className="mt-2 space-y-3">
+                    {group.recommendations.slice(0, 2).map((track) => (
+                      <div
+                        key={`${track.artist}-${track.title}`}
+                        className="border-l pl-3"
+                        style={{ borderColor: motif.primary }}
+                      >
+                        <p className="truncate text-sm font-medium text-uv-text-primary">
+                          {track.title} <span className="text-uv-text-secondary">- {track.artist}</span>
+                        </p>
+                        <p className="text-xs text-uv-text-muted">{track.why}</p>
+                        {linkRow(track)}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : null}
 
       {radio.tracks.length ? (
-        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_370px]">
-          <section className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="font-display text-lg font-semibold text-uv-text-primary">Playlist radio</h3>
-                <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
-                  Unique-seed sequence
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => onBuild(radioSeedText)}
-                  className="rounded-md border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-3 py-2 text-xs font-semibold text-uhchi-teal-bright transition hover:bg-uhchi-secondary/20"
-                >
-                  Build radio tree
-                </button>
-              </div>
+        <div className="grid gap-5 border-t border-uv-border/70 px-4 py-4 xl:grid-cols-[250px_minmax(0,1fr)_320px]">
+          <div className="min-w-0">
+            <p className="font-display text-sm font-semibold text-uv-text-primary">Radio seeds</p>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
+              Unique plus familiar
+            </p>
+            <div className="mt-3 space-y-2">
+              {radio.uniqueSeeds.slice(0, 5).map((track) => {
+                const motif = motifForGenre(track.genre);
+                return (
+                  <div key={`${track.artist}-${track.title}`} className="min-w-0">
+                    <p className="truncate text-sm font-medium text-uv-text-primary">{track.title}</p>
+                    <p className="truncate text-xs text-uv-text-muted">{track.artist}</p>
+                    <p
+                      className="mt-1 inline-flex rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em]"
+                      style={{ borderColor: motif.primary, color: motif.primary }}
+                    >
+                      {track.genre} / {Math.round(track.uniqueness * 100)}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="mt-3 grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
-              <div className="rounded-lg border border-uv-border bg-uv-bg-elevated/70 p-3">
+            {radio.familiarSeeds.length ? (
+              <div className="mt-4 border-t border-uv-border/70 pt-3">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
-                  Unique seeds
+                  Familiar anchors
                 </p>
                 <div className="mt-2 space-y-2">
-                  {radio.uniqueSeeds.slice(0, 5).map((track) => {
+                  {radio.familiarSeeds.map((track) => {
                     const motif = motifForGenre(track.genre);
                     return (
                       <div key={`${track.artist}-${track.title}`} className="min-w-0">
@@ -404,70 +416,63 @@ export function StreamingSourcesPanel({
                           className="mt-1 inline-flex rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em]"
                           style={{ borderColor: motif.primary, color: motif.primary }}
                         >
-                          {track.genre} / {Math.round(track.uniqueness * 100)}
+                          {track.genre} / familiar
                         </p>
                       </div>
                     );
                   })}
                 </div>
-                {radio.familiarSeeds.length ? (
-                  <div className="mt-4 border-t border-uv-border pt-3">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
-                      Familiar anchors
-                    </p>
-                    <div className="mt-2 space-y-2">
-                      {radio.familiarSeeds.map((track) => {
-                        const motif = motifForGenre(track.genre);
-                        return (
-                          <div key={`${track.artist}-${track.title}`} className="min-w-0">
-                            <p className="truncate text-sm font-medium text-uv-text-primary">{track.title}</p>
-                            <p className="truncate text-xs text-uv-text-muted">{track.artist}</p>
-                            <p
-                              className="mt-1 inline-flex rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em]"
-                              style={{ borderColor: motif.primary, color: motif.primary }}
-                            >
-                              {track.genre} / familiar
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
               </div>
+            ) : null}
+          </div>
 
-              <div className="grid max-h-72 gap-2 overflow-auto pr-1 sm:grid-cols-2">
-                {radio.tracks.slice(0, 16).map((track, index) => {
-                  const motif = motifForGenre(track.genre);
-                  return (
-                    <div
-                      key={`${track.role}-${track.artist}-${track.title}-${index}`}
-                      className="rounded-lg border border-uv-border bg-uv-bg-elevated/55 p-3"
-                    >
-                      <div className="flex items-start gap-2">
-                        <span
-                          className="mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-md border font-mono text-[10px]"
-                          style={{ borderColor: motif.primary, color: motif.primary }}
-                        >
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-uv-text-primary">{track.title}</p>
-                          <p className="truncate text-xs text-uv-text-muted">{track.artist}</p>
-                          <p className="mt-1 truncate text-[11px] capitalize text-uv-text-secondary">
-                            {track.role}
-                          </p>
-                        </div>
+          <div className="min-w-0 xl:border-l xl:border-uv-border/70 xl:pl-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-display text-sm font-semibold text-uv-text-primary">Playlist radio</h3>
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
+                  Unique-seed sequence
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onBuild(radioSeedText)}
+                className="rounded-md border border-uhchi-secondary/50 bg-uhchi-secondary/10 px-3 py-2 text-xs font-semibold text-uhchi-teal-bright transition hover:bg-uhchi-secondary/20"
+              >
+                Build radio tree
+              </button>
+            </div>
+            <div className="mt-3 grid max-h-72 gap-2 overflow-auto pr-1 sm:grid-cols-2">
+              {radio.tracks.slice(0, 16).map((track, index) => {
+                const motif = motifForGenre(track.genre);
+                return (
+                  <div
+                    key={`${track.role}-${track.artist}-${track.title}-${index}`}
+                    className="rounded-lg bg-uv-bg-primary/45 p-3"
+                  >
+                    <div className="flex items-start gap-2">
+                      <span
+                        className="mt-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-md border font-mono text-[10px]"
+                        style={{ borderColor: motif.primary, color: motif.primary }}
+                      >
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-uv-text-primary">{track.title}</p>
+                        <p className="truncate text-xs text-uv-text-muted">{track.artist}</p>
+                        <p className="mt-1 truncate text-[11px] capitalize text-uv-text-secondary">
+                          {track.role}
+                        </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
-          </section>
+          </div>
 
-          <aside className="rounded-lg border border-uv-border bg-uv-bg-primary/60 p-3">
-            <h3 className="font-display text-lg font-semibold text-uv-text-primary">YouTube export</h3>
+          <div className="min-w-0 xl:border-l xl:border-uv-border/70 xl:pl-5">
+            <h3 className="font-display text-sm font-semibold text-uv-text-primary">YouTube export</h3>
             <div className="mt-3 space-y-2">
               <input
                 value={youtubeClientId}
@@ -520,7 +525,7 @@ export function StreamingSourcesPanel({
                 </a>
               ) : null}
             </div>
-          </aside>
+          </div>
         </div>
       ) : null}
     </section>
