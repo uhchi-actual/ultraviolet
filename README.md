@@ -7,15 +7,16 @@ Browser-based music discovery and playlist radio.
 **Primary route:** https://uhchi-actual.github.io/ultraviolet/tree/
 
 Ultraviolet turns a list of songs into an interactive recommendation map. It can
-import Spotify playlists, build a genre-aware radio sequence, surface unusual
-seed tracks, and export a generated mix to YouTube.
+scan large Spotify playlists, prune them into diverse seed tracks, build a
+genre-aware radio sequence, and export a generated mix to YouTube.
 
 ## Features
 
-- Interactive music web with animated, genre-colored recommendation links.
+- Interactive music web with genre-colored recommendation links.
 - Playlist radio built from user seeds, close matches, bridge tracks, and a few
   recognizable anchors.
-- Spotify playlist import through the official Web API authorization flow.
+- Spotify playlist import through the official Web API authorization flow, with
+  large playlists pruned into a readable seed set.
 - YouTube playlist export for generated mixes.
 - Streaming search links for Spotify, YouTube, and SoundCloud.
 
@@ -30,7 +31,8 @@ Artist - Title
 To import a Spotify playlist:
 
 1. Create an app in the Spotify Developer Dashboard.
-2. Copy the app's Client ID into Ultraviolet. The Client Secret is not used.
+2. Copy the app's Client ID into Ultraviolet. The app uses Spotify's browser
+   PKCE flow.
 3. Copy the redirect URI shown in Ultraviolet and add it to the Spotify app settings:
    - `https://uhchi-actual.github.io/ultraviolet/tree/` for the public demo
    - `http://127.0.0.1:3000/tree/` for local development
@@ -38,6 +40,10 @@ To import a Spotify playlist:
 
 Spotify requires an exact redirect URI match. `localhost`, a different port,
 `/callback`, or a missing trailing slash will fail.
+
+Playlist import scans up to 5,000 Spotify tracks and selects 48 diverse seeds
+for the map. The tree stays intentionally smaller than the source playlist so it
+remains readable and fast.
 
 For the deployed demo, set a repository variable named `SPOTIFY_CLIENT_ID` before
 the Pages build to prefill the Spotify Client ID field.

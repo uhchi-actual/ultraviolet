@@ -1,146 +1,87 @@
-# Ultraviolet — Development Handoff
+# Ultraviolet Handoff
 
-**For Codex / next agent:** read **[`CODEX_HANDOFF.md`](CODEX_HANDOFF.md)** first — full PRD, correction ledger, $100 scoped plan, acceptance criteria.
+## Current Goal
 
-**Last updated:** 2026-06-17  
-**Owner:** uhchi-actual  
-**Repo path:** `<repo>`
-**Runtime data:** `<local-data>` (FMA zips, extracted mp3s, live catalog; not in git)
+Ship Ultraviolet as a polished browser demo for music discovery:
 
----
+- Public app: https://uhchi-actual.github.io/ultraviolet/
+- Primary route: https://uhchi-actual.github.io/ultraviolet/tree/
+- Repo: https://github.com/uhchi-actual/ultraviolet
 
-## Live demo (target)
+The public route is a static Next.js export. Visitors should be able to paste
+songs, import a Spotify playlist with a Client ID, build a recommendation map,
+and export a curated radio sequence to YouTube.
 
-| What | URL |
-|------|-----|
-| **Public static demo** | https://uhchi-actual.github.io/ultraviolet/ |
-| **Tree (main feature)** | https://uhchi-actual.github.io/ultraviolet/tree/ |
-| **Repo** | https://github.com/uhchi-actual/ultraviolet |
+## Product State
 
-Same pattern as [Laniakea](https://uhchi-actual.github.io/laniakea/): static GitHub Pages, no server on the visitor's machine.
+- The Tree route is the resume-facing feature.
+- Source analysis, Spotify import, playlist radio, YouTube export, and the map
+  live in one consolidated panel on `/tree`.
+- Spotify import uses browser PKCE and scans up to 5,000 playlist tracks.
+- Imported playlists are pruned to 48 diverse seeds before the map is built.
+- The map uses genre-colored regions, one visible line per relationship, seed
+  snapping, and a low edge budget for performance.
+- FMA/static catalog search is no longer part of the public UI.
 
-**Try it:** `New Order - Ceremony` on the Tree page → 80+ nodes, fully in-browser.
+## Key Files
 
----
+- `frontend/src/app/tree/` - Tree route
+- `frontend/src/components/tree/StreamingSourcesPanel.tsx` - source analysis,
+  Spotify import, radio controls, YouTube export
+- `frontend/src/components/tree/TreeCanvas.tsx` - map viewport, seed selector,
+  node selection
+- `frontend/src/components/tree/GlowingThreads.tsx` - relationship rendering
+- `frontend/src/components/tree/organicLayout.ts` - map layout and collision
+- `frontend/src/lib/static/streamingTree.ts` - browser-only recommendation tree
+- `frontend/src/lib/streaming.ts` - parsing, genre inference, Spotify import
+- `frontend/src/lib/playlistRadio.ts` - unique-seed radio sequencing
+- `frontend/src/lib/youtube.ts` - YouTube playlist export
 
-## What's done
+## Verification
 
-### Public static demo (GitHub Pages)
-- Next.js `output: "export"` → `frontend/out/`
-- **7,994 FMA tracks** baked into `frontend/public/data/` (~16 MB embeddings + index)
-- Client-side engine in `frontend/src/lib/static/` (catalog, seeds, scoring, tree)
-- `buildManualTree()` and `searchTracks()` in `api.ts` call the static engine — no backend for Tree/Analyze search
-- Chat / Radio / Profile show a static-demo notice
-- CI: `.github/workflows/pages.yml` (build + deploy on push to `main`)
+Run before shipping:
 
-### Full local stack (backend)
-- FMA pipeline complete in local runtime data
-- CLAP embeddings fixed (`pooler_output`, `audio=[array]`)
-- `catalog_lookup.py` — text/prototype/neighbor seeds (no "upload on Analyze" error)
-- Multi-driver scoring: CLAP + spectral + graph + MMR
-- Backend default port **8001** via `UV_BACKEND_PORT` in `scripts/run-backend.mjs`
-
----
-
-## What's not done (resume here)
-
-| Priority | Task |
-|----------|------|
-| P1 | **Better text seeds** — prototype keys are sparse (`new order`, `the cure`, etc.). Ceremony works via prototype; add more artists or on-device CLAP text model for arbitrary queries |
-| P2 | **Recommendation quality** — static tree branches into niche FMA tracks (Justice Yeldham, etc.) because FMA small is mostly obscure. Tune scoring thresholds in `frontend/src/lib/static/scoring.ts` |
-| P3 | **Analyze upload in static build** — needs Web Audio + WASM or keep server-only |
-| P4 | **Chat / Radio / Profile** — need backend + Ollama; or hide from nav in static-only deploy |
-| P5 | **Docker full stack** — compose exists; verify with GPU for Demucs |
-| P6 | **SOUL RAG** — Chroma ingest, profile synthesis |
-
----
-
-## Key files
-
-```
-frontend/
-  public/data/           # Static catalog (committed; LFS for .bin)
-  src/lib/static/        # Client-side tree engine
-  .env.production        # NEXT_PUBLIC_BASE_PATH=/ultraviolet
-scripts/
-  export_static_catalog.py   # Regenerate public/data from fma_clap.npz
-  verify_static_demo.mjs     # Quick sanity check (no server)
-backend/
-  data/static/           # fma_clap.npz + fma_index.json for CI fallback
-  src/recommendation/catalog_lookup.py
-  src/scoring/clap_driver.py
-```
-
----
-
-## Commands
-
-### Static demo (local, no backend)
 ```powershell
-cd <repo>\frontend
-npm run build
-npx serve out -l 3999
-# → http://localhost:3999/tree/
+npm --prefix frontend run build
+npx serve frontend/out -l 3999
 ```
 
-### Full stack (local dev)
-```powershell
-cd <repo>
-npm run dev
-# Backend :8001, frontend :3000 (see frontend/.env.local)
+Then open:
+
+```text
+http://127.0.0.1:3999/tree/
 ```
 
-### Regenerate static catalog (after re-embedding FMA)
-```powershell
-$env:CATALOG_DIR = "<local-data>\catalog"
-python <repo>\scripts\export_static_catalog.py
-cd <repo>\frontend
-npm run build
+Check:
+
+- Default tree builds.
+- Map is readable at initial zoom.
+- Seed selector snaps to a seed.
+- Spotify redirect URI shown in the app matches the URI configured in Spotify.
+- The home page no longer shows catalog/count status copy.
+
+## Spotify Setup
+
+Use the redirect URI displayed by the app. For the public deployment it should
+be:
+
+```text
+https://uhchi-actual.github.io/ultraviolet/tree/
 ```
 
-### Publish to GitHub Pages (one-time setup)
+For local development it should be:
 
-**If not logged in:**
-```powershell
-gh auth login
-# Choose: GitHub.com → HTTPS → Login with browser
+```text
+http://127.0.0.1:3000/tree/
 ```
 
-**Then publish:**
-```powershell
-cd <repo>
-.\scripts\publish-github.ps1
-```
+Spotify requires an exact match, including protocol, host, port, path, and
+trailing slash.
 
-This creates `uhchi-actual/ultraviolet`, pushes `main`, and triggers the Pages workflow.
+## Notes
 
-**Enable Pages (first deploy only):**  
-https://github.com/uhchi-actual/ultraviolet/settings/pages → **GitHub Actions**
-
-**Verify:** https://uhchi-actual.github.io/ultraviolet/tree/ after CI finishes (~2 min).
-
----
-
-## Git / deploy notes
-
-- Branch: **`main`** (renamed from `master`)
-- Large files: Git LFS for `frontend/public/data/*.bin` and `backend/data/static/*.npz`
-- Pages workflow sets `NEXT_PUBLIC_BASE_PATH=/ultraviolet` — repo name must stay `ultraviolet` for URL to match
-- First deploy: enable **Settings → Pages → Build and deployment → GitHub Actions**
-
----
-
-## Known issues
-
-1. **Stale backend on :8000** — old Python process may still serve pre-fix code; use :8001 or kill PID
-2. **FMA small ≠ mainstream catalog** — New Order isn't in FMA; prototype/neighbor seeds cover demo queries
-3. **`out/` is gitignored** — CI builds fresh; don't commit `frontend/out/`
-
----
-
-## Resume checklist
-
-- [ ] Open https://uhchi-actual.github.io/ultraviolet/tree/ — confirm Tree builds
-- [ ] `git pull` on `main`
-- [ ] Read this file + `ULTRAVIOLET_PRD.md` for phase goals
-- [ ] Pick P1–P6 above based on whether you're shipping **demo** vs **full product**
+- Keep the public demo static and browser-first.
+- Keep rendered trees intentionally smaller than source playlists.
+- Avoid adding setup burden to the critical path.
+- Do not commit local tokens, OAuth secrets, exported browser storage, or local
+  playlist data.

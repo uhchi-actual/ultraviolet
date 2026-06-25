@@ -111,51 +111,29 @@ function addInterconnectionEdges(
 ): void {
   const edgeKeys = new Set(edges.map((edge) => [edge.source, edge.target].sort().join("::")));
   const primarySeeds = nodes.filter((node) => primarySeedIds.has(node.id));
-  const nonPrimary = nodes.filter((node) => !primarySeedIds.has(node.id));
-  const maxSeedNeighbors = primarySeeds.length <= 2 ? 1 : 2;
+  const maxSeedBridges = Math.min(18, Math.max(0, primarySeeds.length - 1));
+  let seedBridges = 0;
 
   for (const seed of primarySeeds) {
-    let added = 0;
     for (const { node, affinity } of rankedNeighbors(seed, primarySeeds, `${layoutSeed}|seed-bridge|${seed.id}`)) {
-      if (affinity < 0.36) continue;
-      if (addUniqueEdge(edges, edgeKeys, seed.id, node.id, 0.48 + affinity * 0.42, "seed_bridge")) added++;
-      if (added >= maxSeedNeighbors) break;
-    }
-  }
-
-  for (const seed of primarySeeds) {
-    let added = 0;
-    for (const { node, affinity } of rankedNeighbors(seed, nonPrimary, `${layoutSeed}|seed-to-cloud|${seed.id}`)) {
-      if (affinity < 0.58) continue;
-      if (addUniqueEdge(edges, edgeKeys, seed.id, node.id, 0.38 + affinity * 0.42, "bridge")) added++;
-      if (added >= 2) break;
-    }
-  }
-
-  const meshBudget = Math.min(120, Math.max(28, Math.floor(nodes.length * 0.85)));
-  let meshAdded = 0;
-  for (const node of nonPrimary) {
-    let nodeAdded = 0;
-    for (const { node: neighbor, affinity } of rankedNeighbors(node, nonPrimary, `${layoutSeed}|mesh|${node.id}`)) {
-      if (affinity < 0.64) continue;
-      if (addUniqueEdge(edges, edgeKeys, node.id, neighbor.id, 0.28 + affinity * 0.36, "mesh")) {
-        meshAdded++;
-        nodeAdded++;
+      if (affinity < 0.5) continue;
+      if (addUniqueEdge(edges, edgeKeys, seed.id, node.id, 0.42 + affinity * 0.32, "seed_bridge")) {
+        seedBridges++;
+        break;
       }
-      if (nodeAdded >= 2 || meshAdded >= meshBudget) break;
     }
-    if (meshAdded >= meshBudget) break;
+    if (seedBridges >= maxSeedBridges) break;
   }
 }
 
 function perSeedLimit(numSeeds: number, requested?: number): number {
-  const cap = numSeeds <= 1 ? 12 : numSeeds <= 5 ? 7 : numSeeds <= 12 ? 4 : 3;
+  const cap = numSeeds <= 1 ? 10 : numSeeds <= 5 ? 5 : numSeeds <= 12 ? 3 : 1;
   return Math.min(Math.max(requested ?? cap, 2), cap);
 }
 
 function childLimit(numSeeds: number): number {
   if (numSeeds <= 1) return 2;
-  if (numSeeds <= 8) return 1;
+  if (numSeeds <= 5) return 1;
   return 0;
 }
 
@@ -251,7 +229,7 @@ export async function buildStreamingTreeStatic(body: {
       source: "paste" as const,
     }))
     .filter((song) => song.title && song.artist)
-    .slice(0, 50);
+    .slice(0, 48);
 
   if (!seeds.length) throw new Error("No songs could be parsed");
 

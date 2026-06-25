@@ -16,12 +16,6 @@ const W = 8600;
 const H = 6200;
 const INITIAL_SCALE = 0.16;
 
-function hashFloat(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return (h % 1000) / 1000;
-}
-
 function searchLink(node: TreeNode, service: "spotify" | "youtube" | "soundcloud"): string {
   const query = encodeURIComponent(`${node.artist} ${node.title}`.trim());
   if (service === "spotify") return `https://open.spotify.com/search/${query}`;
@@ -45,7 +39,6 @@ function TrackNodeButton({
   mapScale: number;
 }) {
   const size = node.type === "seed" ? 120 : 100;
-  const drift = hashFloat(node.id);
   const motif = motifForGenre(node.genre_bucket);
   const labelOpacity = selected || mapScale > 0.34 ? 1 : mapScale > 0.22 ? 0.58 : 0;
   const labelY = mapScale > 0.22 ? 0 : -4;
@@ -67,13 +60,11 @@ function TrackNodeButton({
         y: { type: "spring", stiffness: 34, damping: 15 },
       }}
       style={{ position: "absolute", left: 0, top: 0 }}
+      data-tree-node-id={node.id}
       className="node-no-pan z-10 -translate-x-1/2 -translate-y-1/2 text-left focus:outline-none"
       onClick={onSelect}
     >
-      <motion.div
-        animate={{ y: [0, -2.2 - drift * 2.4, 0] }}
-        transition={{ duration: 6 + drift * 3, repeat: Infinity, ease: "easeInOut" }}
-      >
+      <div>
         <div
           className="rounded-2xl p-[2px] shadow-[0_0_1.2rem_rgba(0,0,0,0.65)] transition-shadow duration-500"
           style={{
@@ -103,7 +94,7 @@ function TrackNodeButton({
           </p>
           <p className="max-w-[150px] truncate text-center text-xs text-uv-text-muted">{node.artist}</p>
         </motion.div>
-      </motion.div>
+      </div>
     </motion.button>
   );
 }
@@ -125,6 +116,7 @@ export function TreeCanvas({ graph }: { graph: TreeGraph }) {
   const nodesById = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph.nodes]);
   const selected = graph.nodes.find((n) => n.id === selectedId) ?? null;
   const selectedMotif = motifForGenre(selected?.genre_bucket);
+  const seedNodes = useMemo(() => graph.nodes.filter((node) => node.id.startsWith("seed:")), [graph.nodes]);
 
   return (
     <div className="relative h-[min(86vh,900px)] overflow-hidden rounded-xl border border-uv-border bg-[#030308]">
@@ -152,7 +144,7 @@ export function TreeCanvas({ graph }: { graph: TreeGraph }) {
         panning={{ velocityDisabled: false, excluded: ["node-no-pan"] }}
         onTransform={(_, state) => setMapScale(state.scale)}
       >
-        {({ zoomIn, zoomOut, resetTransform }) => (
+        {({ zoomIn, zoomOut, resetTransform, zoomToElement }) => (
           <>
             <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
               <button
@@ -180,6 +172,41 @@ export function TreeCanvas({ graph }: { graph: TreeGraph }) {
                 {Math.round(mapScale * 100)}%
               </span>
             </div>
+
+            {seedNodes.length ? (
+              <div
+                data-testid="seed-selector"
+                className="absolute right-3 top-3 z-20 max-h-56 w-[min(72vw,320px)] overflow-auto rounded-lg border border-uv-border bg-uv-bg-surface/82 p-2 backdrop-blur"
+              >
+                <p className="mb-2 px-1 font-mono text-[10px] uppercase tracking-[0.18em] text-uv-text-muted">
+                  Seeds
+                </p>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {seedNodes.slice(0, 48).map((node) => {
+                    const motif = motifForGenre(node.genre_bucket);
+                    return (
+                      <button
+                        key={node.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedId(node.id);
+                          const target = [...document.querySelectorAll<HTMLElement>("[data-tree-node-id]")]
+                            .find((element) => element.getAttribute("data-tree-node-id") === node.id);
+                          if (target) zoomToElement(target, 0.52, 360, "easeOut", -220, 0);
+                        }}
+                        className="truncate rounded-md border bg-uv-bg-primary/60 px-2 py-1.5 text-left text-[11px] text-uv-text-primary transition hover:bg-uv-bg-elevated"
+                        style={{
+                          borderColor: selectedId === node.id ? motif.primary : `${motif.primary}66`,
+                          color: selectedId === node.id ? motif.primary : undefined,
+                        }}
+                      >
+                        {node.title}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             <TransformComponent
               wrapperClass="!h-full !w-full cursor-grab active:cursor-grabbing"

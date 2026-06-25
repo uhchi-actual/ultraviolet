@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { buildManualTree } from "@/lib/api";
@@ -13,6 +13,15 @@ import { TreeCanvas } from "./TreeCanvas";
 export function TreePanel() {
   const [graph, setGraph] = useState<TreeGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const mapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!graph) return;
+    const timeout = window.setTimeout(() => {
+      mapRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => window.clearTimeout(timeout);
+  }, [graph]);
 
   async function buildFromText(text: string) {
     const songs = parseTrackLines(text).map((track) => ({
@@ -51,13 +60,15 @@ export function TreePanel() {
 
         {error ? <p className="mb-4 text-sm text-uhchi-red-bright">{error}</p> : null}
 
-        {!graph || graph.nodes.length === 0 ? (
-          <p className="rounded-xl border border-uv-border bg-uv-bg-surface/70 p-6 text-uv-text-secondary">
-            Enter seeds above and generate a fresh constellation.
-          </p>
-        ) : (
-          <TreeCanvas graph={graph} />
-        )}
+        <div ref={mapRef} className="scroll-mt-20">
+          {!graph || graph.nodes.length === 0 ? (
+            <p className="rounded-xl border border-uv-border bg-uv-bg-surface/70 p-6 text-uv-text-secondary">
+              Enter seeds above and generate a fresh constellation.
+            </p>
+          ) : (
+            <TreeCanvas graph={graph} />
+          )}
+        </div>
       </div>
     </div>
   );

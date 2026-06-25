@@ -14,6 +14,7 @@ import {
   motifLegend,
   parseTrackLines,
   providerSearchUrl,
+  selectDiversePlaylistSeeds,
   spotifyAccessToken,
   spotifyRedirectUri,
   startSpotifyLogin,
@@ -115,7 +116,7 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
 
   async function connectSpotify() {
     if (!clientId.trim()) {
-      setStatus("Add a Spotify Client ID. Browser PKCE does not use a Client Secret.");
+      setStatus("Add a Spotify Client ID. This browser PKCE flow only needs that ID.");
       return;
     }
     const currentRedirect = spotifyRedirectUri();
@@ -159,12 +160,13 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   async function loadPlaylist(id: string, accessToken = token) {
     if (!accessToken) return;
     setLoading(true);
-    setStatus(null);
+    setStatus("Scanning Spotify playlist");
     try {
-      const items = await fetchSpotifyPlaylistTracks(id, accessToken);
-      const text = tracksToSeedText(items, 80);
+      const items = await fetchSpotifyPlaylistTracks(id, accessToken, 5000);
+      const seeds = selectDiversePlaylistSeeds(items, 48);
+      const text = tracksToSeedText(seeds, seeds.length);
       setPasteText(text);
-      setStatus(`${items.length.toLocaleString()} Spotify tracks loaded`);
+      setStatus(`${items.length.toLocaleString()} Spotify tracks scanned; ${seeds.length} diverse seeds selected`);
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Could not load playlist");
     } finally {

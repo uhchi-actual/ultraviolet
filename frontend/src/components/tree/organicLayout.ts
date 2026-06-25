@@ -117,6 +117,26 @@ function relaxCollisions(nodes: TreeSimNode[], width: number, height: number, se
   }
 }
 
+function genreZone(node: Pick<TreeNode, "genre_bucket" | "id">, width: number, height: number): LayoutPos {
+  const zones: Record<string, LayoutPos> = {
+    Rock: { x: width * 0.24, y: height * 0.38 },
+    Experimental: { x: width * 0.28, y: height * 0.68 },
+    "Hip-Hop": { x: width * 0.5, y: height * 0.32 },
+    Electronic: { x: width * 0.72, y: height * 0.34 },
+    Pop: { x: width * 0.72, y: height * 0.58 },
+    Folk: { x: width * 0.3, y: height * 0.82 },
+    Instrumental: { x: width * 0.5, y: height * 0.82 },
+    International: { x: width * 0.74, y: height * 0.82 },
+  };
+  const genre = node.genre_bucket ?? "";
+  if (zones[genre]) return zones[genre];
+  const angle = (hashSeed(node.id) % 6283) / 1000;
+  return {
+    x: width * 0.5 + Math.cos(angle) * width * 0.18,
+    y: height * 0.55 + Math.sin(angle) * height * 0.18,
+  };
+}
+
 /** Radial filament placement — Laniakea-style emergent structure from seeds outward. */
 export function computeOrganicLayout(
   graph: TreeGraph,
@@ -130,21 +150,34 @@ export function computeOrganicLayout(
   const rand = mulberry32(seed);
 
   const cx = width * 0.5;
-  const cy = height * 0.48;
+  const cy = height * 0.52;
   const seeds = graph.nodes.filter((n) => n.id.startsWith("seed:"));
   const roots = seeds.length ? seeds : graph.nodes.filter((n) => n.type === "seed");
   const childrenOf = buildChildrenMap(graph.edges.filter(isStructuralEdge));
   const positions = new Map<string, LayoutPos>();
 
+  const genreTotals = new Map<string, number>();
+  for (const root of roots) {
+    const genre = root.genre_bucket ?? "unknown";
+    genreTotals.set(genre, (genreTotals.get(genre) ?? 0) + 1);
+  }
+  const genreSeen = new Map<string, number>();
+
   // Seed archipelago: keep primary sources separated enough to read as a map.
-  const seedSpread = roots.length <= 1 ? 0 : Math.min(width * 0.33, 620 + Math.sqrt(roots.length) * 260);
   roots.forEach((seedNode, i) => {
+    const genre = seedNode.genre_bucket ?? "unknown";
+    const genreIndex = genreSeen.get(genre) ?? 0;
+    const genreTotal = genreTotals.get(genre) ?? 1;
+    genreSeen.set(genre, genreIndex + 1);
+    const zone = genreZone(seedNode, width, height);
     const angle = i * 2.399963229728653 + (rand() - 0.5) * 0.5;
-    const normalized = Math.sqrt((i + 0.65) / Math.max(1, roots.length));
-    const r = roots.length <= 1 ? 0 : seedSpread * normalized * (0.72 + rand() * 0.34);
+    const localAngle = genreIndex * 2.399963229728653 + (rand() - 0.5) * 0.6;
+    const normalized = Math.sqrt((genreIndex + 0.65) / Math.max(1, genreTotal));
+    const seedSpread = genreTotal <= 1 ? 0 : Math.min(760, 260 + Math.sqrt(genreTotal) * 190);
+    const r = seedSpread * normalized * (0.7 + rand() * 0.38);
     positions.set(seedNode.id, {
-      x: cx + Math.cos(angle) * r,
-      y: cy + Math.sin(angle) * r * 0.72,
+      x: zone.x + Math.cos(localAngle || angle) * r,
+      y: zone.y + Math.sin(localAngle || angle) * r * 0.76,
     });
   });
 
@@ -224,8 +257,8 @@ export function computeOrganicLayout(
         }),
     )
     .force("charge", forceManyBody().strength(-1350).distanceMin(90).distanceMax(1800))
-    .force("x", forceX(cx).strength(0.004))
-    .force("y", forceY(cy).strength(0.006))
+    .force("x", forceX<TreeSimNode>((d) => genreZone(d, width, height).x).strength(0.032))
+    .force("y", forceY<TreeSimNode>((d) => genreZone(d, width, height).y).strength(0.032))
     .force("collide", forceCollide((d) => collisionRadius(d as TreeSimNode)).iterations(5).strength(1))
     .stop();
 

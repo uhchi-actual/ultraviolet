@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { GlowCard } from "@/components/shared/GlowCard";
-import { HealthPill } from "@/components/shared/HealthPill";
 import { IDENTIFIERS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +30,6 @@ export default function HomePage() {
           <span className="uv-gradient-text font-mono text-xs uppercase tracking-[0.2em]">
             Multi-agent music recommendation
           </span>
-          <HealthPill />
         </div>
 
         <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl">

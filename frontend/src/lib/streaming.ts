@@ -320,6 +320,63 @@ export function tracksToSeedText(tracks: StreamingTrack[], limit = 50): string {
     .join("\n");
 }
 
+export function selectDiversePlaylistSeeds(tracks: StreamingTrack[], limit = 48): StreamingTrack[] {
+  const unique = new Map<string, StreamingTrack>();
+  for (const track of tracks) {
+    const key = streamingTrackKey(track);
+    if (!unique.has(key)) unique.set(key, track);
+  }
+
+  const candidates = [...unique.values()];
+  const artistCounts = new Map<string, number>();
+  const genreCounts = new Map<string, number>();
+  for (const track of candidates) {
+    const artist = clean(track.artist).toLowerCase();
+    const genre = inferStreamingGenre(track);
+    artistCounts.set(artist, (artistCounts.get(artist) ?? 0) + 1);
+    genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
+  }
+
+  const byGenre = new Map<string, StreamingTrack[]>();
+  for (const track of candidates) {
+    const genre = inferStreamingGenre(track);
+    const list = byGenre.get(genre) ?? [];
+    list.push(track);
+    byGenre.set(genre, list);
+  }
+
+  function uniqueness(track: StreamingTrack): number {
+    const artistCount = artistCounts.get(clean(track.artist).toLowerCase()) ?? 1;
+    const genreCount = genreCounts.get(inferStreamingGenre(track)) ?? 1;
+    const landmarkPenalty = exactFamiliarLandmark(track) ? 0.22 : 0;
+    const jitter = (hash(streamingTrackKey(track)) % 100) / 1000;
+    return 1 / artistCount + 0.72 / Math.sqrt(genreCount) + jitter - landmarkPenalty;
+  }
+
+  const genres = [...byGenre.keys()].sort((a, b) => (genreCounts.get(a) ?? 0) - (genreCounts.get(b) ?? 0));
+  for (const genre of genres) {
+    byGenre.get(genre)!.sort((a, b) => uniqueness(b) - uniqueness(a));
+  }
+
+  const selected: StreamingTrack[] = [];
+  const selectedKeys = new Set<string>();
+  while (selected.length < limit) {
+    let addedThisRound = false;
+    for (const genre of genres) {
+      const list = byGenre.get(genre)!;
+      const next = list.find((track) => !selectedKeys.has(streamingTrackKey(track)));
+      if (!next) continue;
+      selected.push(next);
+      selectedKeys.add(streamingTrackKey(next));
+      addedThisRound = true;
+      if (selected.length >= limit) break;
+    }
+    if (!addedThisRound) break;
+  }
+
+  return selected;
+}
+
 export function extractSpotifyPlaylistId(value: string): string | null {
   const input = clean(value);
   if (!input) return null;
@@ -455,10 +512,15 @@ export function spotifyAccessToken(): string | null {
   }
 }
 
-async function spotifyGet<T>(path: string, accessToken: string): Promise<T> {
+async function spotifyGet<T>(path: string, accessToken: string, attempt = 0): Promise<T> {
   const response = await fetch(`https://api.spotify.com/v1${path}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  if (response.status === 429 && attempt < 3) {
+    const retryAfter = Number(response.headers.get("Retry-After") ?? "1");
+    await new Promise((resolve) => window.setTimeout(resolve, Math.min(10, retryAfter) * 1000));
+    return spotifyGet<T>(path, accessToken, attempt + 1);
+  }
   if (!response.ok) throw new Error(`Spotify request failed: ${response.status}`);
   return response.json() as Promise<T>;
 }
@@ -477,10 +539,11 @@ export async function fetchSpotifyPlaylists(accessToken: string): Promise<Spotif
 export async function fetchSpotifyPlaylistTracks(
   playlistId: string,
   accessToken: string,
+  maxTracks = 5000,
 ): Promise<StreamingTrack[]> {
   const tracks: StreamingTrack[] = [];
-  let path = `/playlists/${playlistId}/tracks?limit=100&fields=items(track(name,external_urls,album(name),artists(name))),next`;
-  while (path && tracks.length < 250) {
+  let path = `/playlists/${playlistId}/tracks?limit=50&fields=items(track(name,external_urls,album(name),artists(name))),next`;
+  while (path && tracks.length < maxTracks) {
     const data = await spotifyGet<{
       next: string | null;
       items: {
@@ -501,6 +564,7 @@ export async function fetchSpotifyPlaylistTracks(
         url: item.track.external_urls?.spotify,
         source: "spotify",
       });
+      if (tracks.length >= maxTracks) break;
     }
     path = data.next ? data.next.replace("https://api.spotify.com/v1", "") : "";
   }
