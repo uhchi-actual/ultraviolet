@@ -36,8 +36,8 @@ To import a Spotify playlist:
    - `http://127.0.0.1:3000/tree/` for local development
 4. Paste a Spotify playlist link and import it.
 
-For local Spotify auth, open the app at `http://127.0.0.1:3000/tree/` before
-connecting.
+Spotify requires an exact redirect URI match. `localhost`, a different port,
+`/callback`, or a missing trailing slash will fail.
 
 For the deployed demo, set a repository variable named `SPOTIFY_CLIENT_ID` before
 the Pages build to prefill the Spotify Client ID field.

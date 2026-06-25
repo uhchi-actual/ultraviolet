@@ -34,6 +34,24 @@ import {
 const STARTER_ROTATION =
   "New Order - Ceremony\nThe Cure - Plainsong\nMetallica - Nothing Else Matters\nFred again.. - Delilah\nBicep - Glue\nKurt Vile - Pretty Pimpin\nGrouper - Heavy Water/I'd Rather Be Sleeping\nMF DOOM - Doomsday\nFontaines D.C. - Starburster\nBig Thief - Simulation Swarm";
 
+function isLocalhostRedirect(uri: string): boolean {
+  try {
+    return new URL(uri).hostname === "localhost";
+  } catch {
+    return false;
+  }
+}
+
+function loopbackRedirectUri(uri: string): string {
+  try {
+    const url = new URL(uri);
+    if (url.hostname === "localhost") url.hostname = "127.0.0.1";
+    return url.toString();
+  } catch {
+    return uri;
+  }
+}
+
 function linkRow(track: StreamingTrack | DiscoveryTrack) {
   return (
     <div className="mt-2 flex gap-1.5">
@@ -92,10 +110,17 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   const analysis = useMemo(() => analyzeStreamingTracks(tracks), [tracks]);
   const radio = useMemo(() => buildPlaylistRadio(tracks), [tracks]);
   const radioSeedText = useMemo(() => radioToSeedText(radio, 50), [radio]);
+  const spotifySetupUri = useMemo(() => loopbackRedirectUri(redirectUri), [redirectUri]);
+  const localhostRedirect = useMemo(() => isLocalhostRedirect(redirectUri), [redirectUri]);
 
   async function connectSpotify() {
     if (!clientId.trim()) {
       setStatus("Add a Spotify Client ID. Browser PKCE does not use a Client Secret.");
+      return;
+    }
+    const currentRedirect = spotifyRedirectUri();
+    if (isLocalhostRedirect(currentRedirect)) {
+      setStatus(`Open ${loopbackRedirectUri(currentRedirect)} before connecting. Spotify rejects localhost redirects.`);
       return;
     }
     storeSpotifyClientId(clientId);
@@ -105,7 +130,7 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
   async function copyRedirectUri() {
     if (!redirectUri) return;
     try {
-      await navigator.clipboard.writeText(redirectUri);
+      await navigator.clipboard.writeText(spotifySetupUri);
       setStatus("Redirect URI copied. Add it to the Spotify app settings, save, then connect.");
     } catch {
       setStatus("Copy failed. Select the displayed redirect URI manually.");
@@ -258,13 +283,19 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
             </span>
           </div>
           {redirectUri ? (
-            <div className="mt-2 rounded-md bg-uv-bg-primary/45 p-2">
+            <div
+              className={`mt-2 rounded-md border p-2 ${
+                localhostRedirect
+                  ? "border-uhchi-red-bright/50 bg-uhchi-primary/10"
+                  : "border-transparent bg-uv-bg-primary/45"
+              }`}
+            >
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-uv-text-muted">
-                Redirect URI
+                Spotify redirect URI
               </p>
               <div className="mt-1 flex gap-2">
                 <code className="min-w-0 flex-1 truncate text-[11px] text-uv-text-secondary">
-                  {redirectUri}
+                  {spotifySetupUri}
                 </code>
                 <button
                   type="button"
@@ -274,10 +305,18 @@ export function StreamingSourcesPanel({ onBuild }: { onBuild: (text: string) => 
                   Copy
                 </button>
               </div>
+              {localhostRedirect ? (
+                <a
+                  href={spotifySetupUri}
+                  className="mt-2 block text-xs font-medium text-uhchi-red-bright underline-offset-4 hover:underline"
+                >
+                  Open this 127.0.0.1 URL before connecting
+                </a>
+              ) : null}
             </div>
           ) : null}
           <p className="mt-2 text-xs text-uv-text-muted">
-            Add that exact URI in Spotify. Any slash or host mismatch will fail.
+            Add that exact URI in Spotify. Do not use a different port, /callback path, or missing trailing slash.
           </p>
           <div className="mt-3 flex gap-2">
             <input

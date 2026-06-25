@@ -12,8 +12,9 @@ import { GlowingThreads } from "./GlowingThreads";
 import { computeOrganicLayout, type LayoutPos } from "./organicLayout";
 import { StarfieldBackground } from "./StarfieldBackground";
 
-const W = 5600;
-const H = 4200;
+const W = 8600;
+const H = 6200;
+const INITIAL_SCALE = 0.16;
 
 function hashFloat(s: string): number {
   let h = 0;
@@ -110,7 +111,7 @@ function TrackNodeButton({
 export function TreeCanvas({ graph }: { graph: TreeGraph }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [positions, setPositions] = useState<Map<string, LayoutPos>>(new Map());
-  const [mapScale, setMapScale] = useState(0.28);
+  const [mapScale, setMapScale] = useState(INITIAL_SCALE);
 
   const layoutKey = useMemo(
     () => graph.nodes.map((n) => n.id).join("|") + graph.edges.length,
@@ -130,15 +131,24 @@ export function TreeCanvas({ graph }: { graph: TreeGraph }) {
       <StarfieldBackground />
 
       <TransformWrapper
-        initialScale={0.28}
-        minScale={0.08}
+        initialScale={INITIAL_SCALE}
+        minScale={0.055}
         maxScale={2.8}
         centerOnInit
         limitToBounds={false}
         smooth
-        wheel={{ step: 0.003 }}
+        wheel={{ step: 0.0014 }}
         doubleClick={{ disabled: true }}
-        zoomAnimation={{ animationTime: 180, animationType: "easeOut" }}
+        zoomAnimation={{ animationTime: 260, animationType: "easeOut" }}
+        velocityAnimation={{
+          sensitivityMouse: 0.18,
+          sensitivityTouch: 0.22,
+          maxStrengthMouse: 0.75,
+          maxStrengthTouch: 0.85,
+          inertia: 0.5,
+          animationTime: 420,
+        }}
+        autoAlignment={{ animationTime: 260, velocityAlignmentTime: 220, sizeX: 80, sizeY: 80 }}
         panning={{ velocityDisabled: false, excluded: ["node-no-pan"] }}
         onTransform={(_, state) => setMapScale(state.scale)}
       >
@@ -147,14 +157,14 @@ export function TreeCanvas({ graph }: { graph: TreeGraph }) {
             <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => zoomIn(0.22)}
+                onClick={() => zoomIn(0.12)}
                 className="h-8 w-8 rounded-md border border-uv-border bg-uv-bg-surface/80 text-sm backdrop-blur transition hover:border-uv-purple-bright"
               >
                 +
               </button>
               <button
                 type="button"
-                onClick={() => zoomOut(0.22)}
+                onClick={() => zoomOut(0.12)}
                 className="h-8 w-8 rounded-md border border-uv-border bg-uv-bg-surface/80 text-sm backdrop-blur transition hover:border-uv-purple-bright"
               >
                 -

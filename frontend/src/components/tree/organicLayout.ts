@@ -35,6 +35,10 @@ function hashSeed(s: string): number {
 type TreeSimNode = TreeNode & { x: number; y: number };
 type TreeSimLink = { source: TreeSimNode; target: TreeSimNode; kind?: TreeEdge["kind"]; weight: number };
 
+function collisionRadius(node: Pick<TreeNode, "type">): number {
+  return node.type === "seed" ? 178 : 148;
+}
+
 function isStructuralEdge(edge: TreeEdge): boolean {
   return edge.kind !== "seed_bridge" && edge.kind !== "bridge" && edge.kind !== "mesh";
 }
@@ -47,6 +51,70 @@ function buildChildrenMap(edges: TreeEdge[]): Map<string, string[]> {
     map.set(e.source, list);
   }
   return map;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function fitToCanvas(nodes: TreeSimNode[], width: number, height: number): void {
+  const pad = 360;
+  const minX = Math.min(...nodes.map((node) => node.x));
+  const maxX = Math.max(...nodes.map((node) => node.x));
+  const minY = Math.min(...nodes.map((node) => node.y));
+  const maxY = Math.max(...nodes.map((node) => node.y));
+  const spanX = Math.max(1, maxX - minX);
+  const spanY = Math.max(1, maxY - minY);
+  const scale = Math.min(1, (width - pad * 2) / spanX, (height - pad * 2) / spanY);
+  const centerX = (minX + maxX) * 0.5;
+  const centerY = (minY + maxY) * 0.5;
+
+  for (const node of nodes) {
+    node.x = width * 0.5 + (node.x - centerX) * scale;
+    node.y = height * 0.5 + (node.y - centerY) * scale;
+    node.x = clamp(node.x, pad, width - pad);
+    node.y = clamp(node.y, pad, height - pad);
+  }
+}
+
+function relaxCollisions(nodes: TreeSimNode[], width: number, height: number, seed: number): void {
+  const rand = mulberry32(seed ^ 0x9e3779b9);
+  const pad = 300;
+
+  for (let tick = 0; tick < 180; tick++) {
+    let moved = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i]!;
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j]!;
+        const minDist = collisionRadius(a) + collisionRadius(b) + 34;
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let dist = Math.hypot(dx, dy);
+        if (dist < 0.01) {
+          const angle = rand() * Math.PI * 2;
+          dx = Math.cos(angle);
+          dy = Math.sin(angle);
+          dist = 1;
+        }
+        if (dist >= minDist) continue;
+        const push = (minDist - dist) * 0.53;
+        const ux = dx / dist;
+        const uy = dy / dist;
+        a.x -= ux * push;
+        a.y -= uy * push;
+        b.x += ux * push;
+        b.y += uy * push;
+        moved += push;
+      }
+    }
+
+    for (const node of nodes) {
+      node.x = clamp(node.x, pad, width - pad);
+      node.y = clamp(node.y, pad, height - pad);
+    }
+    if (moved < 0.01) break;
+  }
 }
 
 /** Radial filament placement — Laniakea-style emergent structure from seeds outward. */
@@ -68,15 +136,15 @@ export function computeOrganicLayout(
   const childrenOf = buildChildrenMap(graph.edges.filter(isStructuralEdge));
   const positions = new Map<string, LayoutPos>();
 
-  // Seed supercluster — tight nucleus with slight scatter
-  const seedSpread = roots.length <= 1 ? 0 : Math.min(620, 180 + Math.sqrt(roots.length) * 112);
+  // Seed archipelago: keep primary sources separated enough to read as a map.
+  const seedSpread = roots.length <= 1 ? 0 : Math.min(width * 0.33, 620 + Math.sqrt(roots.length) * 260);
   roots.forEach((seedNode, i) => {
     const angle = i * 2.399963229728653 + (rand() - 0.5) * 0.5;
     const normalized = Math.sqrt((i + 0.65) / Math.max(1, roots.length));
-    const r = roots.length <= 1 ? 0 : seedSpread * normalized * (0.44 + rand() * 0.42);
+    const r = roots.length <= 1 ? 0 : seedSpread * normalized * (0.72 + rand() * 0.34);
     positions.set(seedNode.id, {
       x: cx + Math.cos(angle) * r,
-      y: cy + Math.sin(angle) * r * 0.62,
+      y: cy + Math.sin(angle) * r * 0.72,
     });
   });
 
@@ -90,7 +158,7 @@ export function computeOrganicLayout(
     const baseAngle = Math.atan2(parent.y - cy, parent.x - cx);
     const spread = Math.min(Math.PI * 0.95, 0.62 + kids.length * 0.13);
     const step = kids.length > 1 ? spread / (kids.length - 1) : 0;
-    const armLen = 168 + depth * 118 + rand() * 74;
+    const armLen = 330 + depth * 190 + rand() * 150;
 
     kids.forEach((kidId, idx) => {
       if (visited.has(kidId)) return;
@@ -114,12 +182,12 @@ export function computeOrganicLayout(
   for (const n of graph.nodes) {
     if (!positions.has(n.id)) {
       const a = rand() * Math.PI * 2;
-      const r = width * 0.2 + rand() * width * 0.1;
+      const r = width * 0.24 + rand() * width * 0.18;
       positions.set(n.id, { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
     }
   }
 
-  // Light collision pass — separate overlaps without destroying filament shape
+  // Force pass: preserve the web links while giving covers and labels breathing room.
   const simNodes: TreeSimNode[] = graph.nodes.map((n) => {
     const p = positions.get(n.id)!;
     return { ...n, x: p.x, y: p.y };
@@ -141,27 +209,30 @@ export function computeOrganicLayout(
       forceLink<TreeSimNode, TreeSimLink>(links)
         .id((d) => d.id)
         .distance((d) => {
-          if (d.kind === "seed_bridge") return 250;
-          if (d.kind === "bridge") return 185;
-          if (d.kind === "mesh") return 146;
-          if (d.kind === "trunk") return 168;
-          return 188;
+          if (d.kind === "seed_bridge") return 640;
+          if (d.kind === "bridge") return 470;
+          if (d.kind === "mesh") return 360;
+          if (d.kind === "trunk") return 420;
+          return 440;
         })
         .strength((d) => {
-          if (d.kind === "seed_bridge") return 0.08;
-          if (d.kind === "bridge") return 0.075;
-          if (d.kind === "mesh") return 0.04;
-          if (d.kind === "trunk") return 0.11;
-          return 0.08;
+          if (d.kind === "seed_bridge") return 0.045;
+          if (d.kind === "bridge") return 0.055;
+          if (d.kind === "mesh") return 0.026;
+          if (d.kind === "trunk") return 0.07;
+          return 0.05;
         }),
     )
-    .force("charge", forceManyBody().strength(-470))
-    .force("x", forceX(cx).strength(0.012))
-    .force("y", forceY(cy).strength(0.016))
-    .force("collide", forceCollide((d) => ((d as TreeSimNode).type === "seed" ? 86 : 72)))
+    .force("charge", forceManyBody().strength(-1350).distanceMin(90).distanceMax(1800))
+    .force("x", forceX(cx).strength(0.004))
+    .force("y", forceY(cy).strength(0.006))
+    .force("collide", forceCollide((d) => collisionRadius(d as TreeSimNode)).iterations(5).strength(1))
     .stop();
 
-  for (let i = 0; i < 230; i++) sim.tick();
+  for (let i = 0; i < 430; i++) sim.tick();
+
+  relaxCollisions(simNodes, width, height, seed);
+  fitToCanvas(simNodes, width, height);
 
   const final = new Map<string, LayoutPos>();
   for (const n of simNodes) {
